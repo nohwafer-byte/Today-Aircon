@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today Aircon Service Department</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Firebase SDK Modules -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }</style>
+</head>
+<body class="pb-12">
+    <nav class="bg-blue-800 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-snowflake text-2xl text-blue-300"></i>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Today Aircon Service Department</h1>
+                    <p class="text-xs text-blue-200">Field & Workshop Daily Reporting App</p>
+                </div>
+            </div>
+            <div id="userBadge" class="hidden text-right">
+                <span id="userNameDisplay" class="font-semibold block text-sm"></span>
+                <span id="userRoleDisplay" class="text-xs bg-blue-900 px-2 py-0.5 rounded-full text-blue-200"></span>
+                <button onclick="logout()" class="text-xs text-red-300 underline ml-2"><i class="fa-solid fa-right-from-bracket"></i> ထွက်မည်</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto p-4">
+        <!-- Auth Section -->
+        <div id="authSection" class="bg-white p-6 rounded-xl shadow-md max-w-md mx-auto my-8">
+            <h2 class="text-center font-bold text-gray-800 text-xl mb-4">Today Aircon Portal</h2>
+            <div class="flex border-b mb-4">
+                <button onclick="switchAuthTab('login')" id="loginTabBtn" class="w-1/2 py-2 font-bold text-center border-b-2 border-blue-600 text-blue-600">အကောင့်ဝင်ရန်</button>
+                <button onclick="switchAuthTab('register')" id="regTabBtn" class="w-1/2 py-2 font-bold text-center text-gray-500">အကောင့်သစ်ဖွင့်ရန်</button>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">ဖုန်းနံပါတ်</label>
+                    <input type="text" id="loginPhone" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="09xxxxxxxxx">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">စကားဝှက်</label>
+                    <input type="password" id="loginPass" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700">ဝင်ရောက်မည်</button>
+                
+                <div class="mt-6 pt-4 border-t text-center">
+                    <p class="text-xs text-gray-500 mb-2">Demo အမြန်စမ်းသပ်ရန် (Quick Demo Login)</p>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <button type="button" onclick="quickLogin('Leader')" class="bg-gray-100 p-2 rounded hover:bg-gray-200 font-semibold">Leader View</button>
+                        <button type="button" onclick="quickLogin('Second Leader')" class="bg-gray-100 p-2 rounded hover:bg-gray-200 font-semibold">2nd Leader View</button>
+                        <button type="button" onclick="quickLogin('Workshop Supervisor')" class="bg-amber-50 text-amber-800 p-2 rounded font-bold hover:bg-amber-100">Workshop Sup View</button>
+                        <button type="button" onclick="quickLogin('Field Supervisor')" class="bg-green-50 text-green-800 p-2 rounded font-bold hover:bg-green-100">Field Sup View</button>
+                        <button type="button" onclick="quickLogin('Manager')" class="col-span-2 bg-blue-50 text-blue-700 p-2 rounded font-bold hover:bg-blue-100">Service Manager View</button>
+                    </div>
+                </div>
+            </form>
+
+            <form id="registerForm" onsubmit="handleRegister(event)" class="hidden">
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">အမည်</label>
+                    <input type="text" id="regName" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="ဦးမောင်မောင်">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">ဖုန်းနံပါတ်</label>
+                    <input type="text" id="regPhone" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="09xxxxxxxxx">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">ရာထူး (Role)</label>
+                    <select id="regRole" required class="w-full p-2.5 border rounded-lg text-sm bg-white">
+                        <option value="Helper/Trainee">Helper / Trainee</option>
+                        <option value="Second Leader">Second Leader</option>
+                        <option value="Leader">Leader</option>
+                        <option value="Workshop Supervisor">Workshop Supervisor (ရုံးတွင်းစက်ပြင်)</option>
+                        <option value="Field Supervisor">Field Supervisor (ကွင်းဆင်း)</option>
+                        <option value="Manager">Service Manager</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">စကားဝှက်</label>
+                    <input type="password" id="regPass" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700">အကောင့်သစ်ဖန်တီးမည်</button>
+            </form>
+        </div>
+
+        <!-- Main App Content -->
+        <div id="mainApp" class="hidden space-y-6">
+            <div id="roleBanner" class="p-4 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md flex justify-between items-center">
+                <div>
+                    <h2 id="dashboardTitle" class="text-xl font-bold">Daily Report Panel</h2>
+                    <p class="text-xs text-blue-100">Today Aircon Service Department</p>
+                </div>
+                <span id="roleTag" class="px-3 py-1 bg-white text-blue-900 rounded-full font-bold text-xs shadow"></span>
+            </div>
+
+            <!-- Field Technicians Section -->
+            <div id="fieldReportSection" class="bg-white p-6 rounded-xl shadow-md space-y-4">
+                <h3 class="font-bold text-lg border-b pb-2 text-gray-800"><i class="fa-solid fa-pen-to-square text-blue-600"></i> နေ့စဉ်လုပ်ငန်းဆောင်ရွက်မှု တင်ပြရန်</h3>
+                <form id="dailyReportForm" onsubmit="submitReport(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">ရက်စွဲ</label>
+                            <input type="date" id="repDate" required class="w-full p-2 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">အဖွဲ့/အမည် (Team Name / Leader)</label>
+                            <input type="text" id="repTeam" required class="w-full p-2 border rounded-lg text-sm" placeholder="Team A (Leader Kyaw Kyaw)">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">ဖောက်သည်အမည် / Site နေရာ</label>
+                            <input type="text" id="repCustomer" required class="w-full p-2 border rounded-lg text-sm" placeholder="U Ba / Kamayut Township">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">လုပ်ငန်းအမျိုးအစား</label>
+                            <select id="repJobType" required class="w-full p-2 border rounded-lg text-sm bg-white">
+                                <option value="Home Inspection">Home Inspection (အိမ်တိုင်ရာရောက်စစ်ဆေးခြင်း)</option>
+                                <option value="Relocation">Relocation (စက်အဟောင်း ဖြုတ်/ဆေး/ရွှေ့တပ်)</option>
+                                <option value="Site Project">Site Project Installation</option>
+                                <option value="Routine Servicing">Routine Servicing / Maintenance</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="pickupBox" class="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                        <label class="flex items-center space-x-2 text-xs font-bold text-amber-900">
+                            <input type="checkbox" id="repPickupReq" onchange="document.getElementById('pickupDetails').classList.toggle('hidden', !this.checked)" class="rounded text-amber-600">
+                            <span>ပြစ်ချက်ကြီးမားသဖြင့် ရုံးတွင်း (Workshop) သို့ သယ်ဆောင်ပြင်ဆင်ရန် လိုအပ်သည်</span>
+                        </label>
+                        <div id="pickupDetails" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+                            <select id="repApplianceType" class="p-2 border rounded text-xs bg-white">
+                                <option value="Refrigerator">ရေခဲသေတ္တာ (Refrigerator)</option>
+                                <option value="Washing Machine">အဝတ်လျှော်စက် (Washing Machine)</option>
+                                <option value="Split Aircon">Split AC</option>
+                                <option value="Inverter / VRF Board">Inverter/VRV Board Only</option>
+                            </select>
+                            <input type="text" id="repDefect" class="p-2 border rounded text-xs" placeholder="စက်ပြစ်ချက် အသေးစိတ်">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">သုံးစွဲခဲ့သည့် အပိုပစ္စည်းများ (Spare Parts Used)</label>
+                        <textarea id="repMaterials" rows="2" class="w-full p-2 border rounded-lg text-sm" placeholder="ဥပမာ - Copper Pipe, R32 Gas"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">လုပ်ငန်းပြီးစီးမှု အခြေအနေနှင့် မှတ်ချက်</label>
+                        <textarea id="repStatus" rows="2" required class="w-full p-2 border rounded-lg text-sm" placeholder="လုပ်ငန်း 100% ပြီးစီး..."></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 shadow">
+                        <i class="fa-solid fa-paper-plane"></i> Supervisor ထံ တင်ပြမည်
+                    </button>
+                </form>
+            </div>
+
+            <!-- Workshop Section -->
+            <div id="workshopSection" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
+                <h3 class="font-bold text-lg border-b pb-2 text-gray-800"><i class="fa-solid fa-wrench text-amber-600"></i> ရုံးတွင်း စက်အဝင်အထွက် စီမံမှု (Workshop Supervisor View)</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left text-gray-600 border">
+                        <thead class="bg-gray-100 uppercase text-gray-700">
+                            <tr>
+                                <th class="p-2 border">ရက်စွဲ</th>
+                                <th class="p-2 border">စက်အမျိုးအစား</th>
+                                <th class="p-2 border">ဖောက်သည်/အဖွဲ့</th>
+                                <th class="p-2 border">ပြစ်ချက်</th>
+                                <th class="p-2 border">ပြင်ဆင်မှုအခြေအနေ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workshopTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Supervisor & Manager Section -->
+            <div id="supervisorSection" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
+                <h3 class="font-bold text-lg border-b pb-2 text-gray-800"><i class="fa-solid fa-list-check text-green-600"></i> နေ့စဉ် အစီရင်ခံစာများ စစ်ဆေးရေး Panel</h3>
+                <div id="reportList" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration (Demo Public Database URL)
+        const firebaseConfig = {
+            databaseURL: "https://today-aircon-default-rtdb.firebaseio.com"
+        };
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const db = firebase.database();
+
+        let currentUser = null;
+
+        window.onload = function() {
+            const savedUser = localStorage.getItem('today_aircon_user_v3');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showAppScreen();
+            }
+        };
+
+        function switchAuthTab(tab) {
+            document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('registerForm').classList.toggle('hidden', tab === 'login');
+        }
+
+        function quickLogin(role) {
+            currentUser = { name: role + " User", phone: "0912345678", role: role };
+            localStorage.setItem('today_aircon_user_v3', JSON.stringify(currentUser));
+            showAppScreen();
+        }
+
+        function logout() {
+            localStorage.removeItem('today_aircon_user_v3');
+            currentUser = null;
+            location.reload();
+        }
+
+        function showAppScreen() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userBadge').classList.remove('hidden');
+            document.getElementById('userNameDisplay').innerText = currentUser.name;
+            document.getElementById('userRoleDisplay').innerText = currentUser.role;
+            document.getElementById('roleTag').innerText = currentUser.role;
+
+            const isFieldTech = ['Helper/Trainee', 'Second Leader', 'Leader'].includes(currentUser.role);
+            const isWorkshop = currentUser.role === 'Workshop Supervisor';
+            const isSupervisorOrManager = ['Field Supervisor', 'Manager'].includes(currentUser.role);
+
+            document.getElementById('fieldReportSection').classList.toggle('hidden', !isFieldTech);
+            document.getElementById('workshopSection').classList.toggle('hidden', !isWorkshop && currentUser.role !== 'Manager');
+            document.getElementById('supervisorSection').classList.toggle('hidden', !isSupervisorOrManager);
+
+            // Listen to Firebase Realtime Updates across all devices
+            db.ref('daily_reports').on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                const reportArray = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                renderReports(reportArray);
+                renderWorkshop(reportArray);
+            });
+        }
+
+        function submitReport(e) {
+            e.preventDefault();
+            const newReport = {
+                date: document.getElementById('repDate').value,
+                team: document.getElementById('repTeam').value,
+                customer: document.getElementById('repCustomer').value,
+                jobType: document.getElementById('repJobType').value,
+                pickupReq: document.getElementById('repPickupReq').checked,
+                applianceType: document.getElementById('repApplianceType').value,
+                defect: document.getElementById('repDefect').value,
+                materials: document.getElementById('repMaterials').value,
+                status: document.getElementById('repStatus').value,
+                approval: 'Pending',
+                workshopStatus: document.getElementById('repPickupReq').checked ? 'Intake' : 'N/A'
+            };
+
+            // Push to Online Firebase Database directly
+            db.ref('daily_reports').push(newReport, (error) => {
+                if (error) { alert("Data save မရပါ: " + error.message); }
+                else {
+                    alert("အစီရင်ခံစာ Cloud Database သို့ အောင်မြင်စွာ တင်ပြီးပါပြီဗျာ။");
+                    document.getElementById('dailyReportForm').reset();
+                }
+            });
+        }
+
+        function renderReports(reports) {
+            const container = document.getElementById('reportList');
+            container.innerHTML = '';
+            if (reports.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">အစီရင်ခံစာများ မရှိသေးပါ</p>`;
+                return;
+            }
+            reports.reverse().forEach(r => {
+                const card = document.createElement('div');
+                card.className = "p-4 border rounded-lg bg-gray-50 space-y-2 text-xs";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-bold text-sm text-blue-800">${r.customer}</span>
+                            <span class="ml-2 text-gray-500">(${r.date})</span>
+                            <span class="block font-semibold text-gray-700">Team: ${r.team} | Type: ${r.jobType}</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-white font-bold ${r.approval === 'Approved' ? 'bg-green-600' : 'bg-amber-500'}">${r.approval}</span>
+                    </div>
+                    ${r.pickupReq ? `<p class="text-amber-800 bg-amber-100 p-1 rounded font-bold">⚠️ Workshop သို့ယူရမည်: ${r.applianceType} (${r.defect || 'မပါ'})</p>` : ''}
+                    <p class="text-gray-600"><strong>သုံးစွဲပစ္စည်း:</strong> ${r.materials || '-'}</p>
+                    <p class="text-gray-600"><strong>အခြေအနေ:</strong> ${r.status}</p>
+                    ${['Field Supervisor', 'Manager'].includes(currentUser.role) && r.approval === 'Pending' ? `
+                        <button onclick="db.ref('daily_reports/${r.id}').update({approval:'Approved'})" class="mt-2 bg-green-600 text-white px-3 py-1 rounded font-bold">Approve လုပ်မည်</button>
+                    ` : ''}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderWorkshop(reports) {
+            const tbody = document.getElementById('workshopTableBody');
+            tbody.innerHTML = '';
+            const pickups = reports.filter(r => r.pickupReq);
+            if (pickups.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-gray-400">ရုံးတွင်း ပြင်ဆင်ရန် စက်များမရှိပါ</td></tr>`;
+                return;
+            }
+            pickups.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2 border">${r.date}</td>
+                    <td class="p-2 border font-bold">${r.applianceType}</td>
+                    <td class="p-2 border">${r.customer} (${r.team})</td>
+                    <td class="p-2 border">${r.defect || '-'}</td>
+                    <td class="p-2 border">
+                        <select onchange="db.ref('daily_reports/${r.id}').update({workshopStatus: this.value})" class="p-1 border rounded bg-white text-xs">
+                            <option value="Intake" ${r.workshopStatus === 'Intake' ? 'selected' : ''}>Intake (ရောက်ရှိ)</option>
+                            <option value="Repairing" ${r.workshopStatus === 'Repairing' ? 'selected' : ''}>Repairing (ပြင်ဆင်နေ)</option>
+                            <option value="Testing" ${r.workshopStatus === 'Testing' ? 'selected' : ''}>Testing (စမ်းသပ်နေ)</option>
+                            <option value="Delivered" ${r.workshopStatus === 'Delivered' ? 'selected' : ''}>Delivered (အပ်နှံပြီး)</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
