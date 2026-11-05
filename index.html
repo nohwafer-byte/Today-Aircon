@@ -235,7 +235,7 @@ window.__started = true;
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, orderBy, serverTimestamp }
+import { initializeFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, orderBy, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ====== ဒီနေရာမှာ Firebase config ကို ကိုယ့်ဟာနဲ့ အစားထိုးပါ (README ကြည့်ပါ) ====== */
@@ -271,7 +271,8 @@ if (!configured) {
   $('loading').innerHTML = '⚠️ Firebase config မထည့်ရသေးပါ။ index.html ထဲက <b>firebaseConfig</b> ကို ဖြည့်ပါ (README ကြည့်ပါ)။';
 } else {
   const app = initializeApp(firebaseConfig);
-  auth = getAuth(app); db = getFirestore(app);
+  auth = getAuth(app);
+  db = initializeFirestore(app, { experimentalForceLongPolling: true, useFetchStreams: false });
   $('repDate').value = new Date().toISOString().slice(0, 10);
 
   onAuthStateChanged(auth, async user => {
