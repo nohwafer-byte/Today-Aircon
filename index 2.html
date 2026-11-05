@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1e40af">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Today Aircon Service Department</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>body{font-family:'Segoe UI',Tahoma,'Myanmar Text','Noto Sans Myanmar',sans-serif;background:#f3f4f6}</style>
+</head>
+<body class="pb-12">
+<nav class="bg-blue-800 text-white p-4 shadow-lg sticky top-0 z-50">
+  <div class="max-w-4xl mx-auto flex justify-between items-center">
+    <div class="flex items-center space-x-2">
+      <span class="text-2xl">❄️</span>
+      <div>
+        <h1 class="font-bold text-lg leading-tight">Today Aircon Service Department</h1>
+        <p class="text-xs text-blue-200">Field & Workshop Daily Reporting App</p>
+      </div>
+    </div>
+    <div id="userBadge" class="hidden text-right">
+      <span id="userNameDisplay" class="font-semibold block text-sm"></span>
+      <span id="userRoleDisplay" class="text-xs bg-blue-900 px-2 py-0.5 rounded-full text-blue-200"></span>
+      <button onclick="logout()" class="text-xs text-red-300 underline ml-2">ထွက်မည်</button>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-4xl mx-auto p-4">
+  <div id="loading" class="text-center text-gray-500 py-16 text-sm">လုပ်ဆောင်နေသည်...</div>
+
+  <!-- AUTH -->
+  <div id="authSection" class="hidden bg-white p-6 rounded-xl shadow-md max-w-md mx-auto my-8">
+    <h2 class="text-center font-bold text-gray-800 text-xl mb-4">Today Aircon Portal</h2>
+    <div class="flex border-b mb-4">
+      <button onclick="switchAuthTab('login')" id="loginTabBtn" class="w-1/2 py-2 font-bold text-center border-b-2 border-blue-600 text-blue-600">အကောင့်ဝင်ရန်</button>
+      <button onclick="switchAuthTab('register')" id="regTabBtn" class="w-1/2 py-2 font-bold text-center text-gray-500">အကောင့်သစ်ဖွင့်ရန်</button>
+    </div>
+    <p id="authError" class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2 mb-3"></p>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="mb-3">
+        <label class="block text-xs font-bold text-gray-700 mb-1">ဖုန်းနံပါတ်</label>
+        <input type="tel" id="loginPhone" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="09xxxxxxxxx">
+      </div>
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-gray-700 mb-1">စကားဝှက် (Password)</label>
+        <input type="password" id="loginPass" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="••••••••">
+      </div>
+      <button type="submit" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700">ဝင်ရောက်မည်</button>
+    </form>
+    <form id="registerForm" onsubmit="handleRegister(event)" class="hidden">
+      <div class="mb-3">
+        <label class="block text-xs font-bold text-gray-700 mb-1">အမည်</label>
+        <input type="text" id="regName" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="ဦးမောင်မောင်">
+      </div>
+      <div class="mb-3">
+        <label class="block text-xs font-bold text-gray-700 mb-1">ဖုန်းနံပါတ်</label>
+        <input type="tel" id="regPhone" required class="w-full p-2.5 border rounded-lg text-sm" placeholder="09xxxxxxxxx">
+      </div>
+      <div class="mb-3">
+        <label class="block text-xs font-bold text-gray-700 mb-1">ရာထူး (Role)</label>
+        <select id="regRole" required class="w-full p-2.5 border rounded-lg text-sm bg-white">
+          <option value="Helper/Trainee">Helper / Trainee</option>
+          <option value="Second Leader">Second Leader</option>
+          <option value="Leader">Leader</option>
+        </select>
+        <p class="text-[11px] text-gray-500 mt-1">Supervisor / Manager ရာထူးများကို Admin က သတ်မှတ်ပေးပါမည်။</p>
+      </div>
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-gray-700 mb-1">စကားဝှက် (အနည်းဆုံး ၆ လုံး)</label>
+        <input type="password" id="regPass" required minlength="6" class="w-full p-2.5 border rounded-lg text-sm" placeholder="••••••••">
+      </div>
+      <button type="submit" class="w-full bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700">အကောင့်သစ်ဖန်တီးမည်</button>
+    </form>
+  </div>
+
+  <!-- MAIN -->
+  <div id="mainApp" class="hidden space-y-6">
+    <div class="p-4 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md flex justify-between items-center">
+      <div>
+        <h2 class="text-xl font-bold">Daily Report Panel</h2>
+        <p class="text-xs text-blue-100">Today Aircon Service Department</p>
+      </div>
+      <span id="roleTag" class="px-3 py-1 bg-white text-blue-900 rounded-full font-bold text-xs shadow"></span>
+    </div>
+
+    <div id="fieldReportSection" class="bg-white p-6 rounded-xl shadow-md space-y-4">
+      <h3 class="font-bold text-lg border-b pb-2 text-gray-800">📝 နေ့စဉ်လုပ်ငန်းဆောင်ရွက်မှု တင်ပြရန်</h3>
+      <form id="dailyReportForm" onsubmit="submitReport(event)" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div><label class="block text-xs font-bold text-gray-700 mb-1">ရက်စွဲ</label>
+            <input type="date" id="repDate" required class="w-full p-2 border rounded-lg text-sm"></div>
+          <div><label class="block text-xs font-bold text-gray-700 mb-1">အဖွဲ့/အမည် (Team Name / Leader)</label>
+            <input type="text" id="repTeam" required class="w-full p-2 border rounded-lg text-sm" placeholder="Team A (Leader Kyaw Kyaw)"></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div><label class="block text-xs font-bold text-gray-700 mb-1">ဖောက်သည်အမည် / Site နေရာ</label>
+            <input type="text" id="repCustomer" required class="w-full p-2 border rounded-lg text-sm" placeholder="U Ba / Kamayut Township"></div>
+          <div><label class="block text-xs font-bold text-gray-700 mb-1">လုပ်ငန်းအမျိုးအစား</label>
+            <select id="repJobType" onchange="toggleJobFields()" required class="w-full p-2 border rounded-lg text-sm bg-white">
+              <option value="Home Inspection">Home Inspection (အိမ်တိုင်ရာရောက်စစ်ဆေးခြင်း)</option>
+              <option value="Relocation">Relocation (စက်အဟောင်း ဖြုတ်/ဆေး/ရွှေ့တပ်)</option>
+              <option value="Site Project">Site Project Installation</option>
+              <option value="Routine Servicing">Routine Servicing / Maintenance</option>
+            </select></div>
+        </div>
+        <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+          <label class="flex items-center space-x-2 text-xs font-bold text-amber-900">
+            <input type="checkbox" id="repPickupReq" onchange="togglePickupDetails()" class="rounded text-amber-600">
+            <span>ပြစ်ချက်ကြီးမားသဖြင့် ရုံးတွင်း (Workshop) သို့ သယ်ဆောင်ပြင်ဆင်ရန် လိုအပ်သည်</span>
+          </label>
+          <div id="pickupDetails" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+            <select id="repApplianceType" class="p-2 border rounded text-xs bg-white">
+              <option value="Refrigerator">ရေခဲသေတ္တာ (Refrigerator)</option>
+              <option value="Washing Machine">အဝတ်လျှော်စက် (Washing Machine)</option>
+              <option value="Split Aircon">Split AC</option>
+              <option value="Inverter / VRF Board">Inverter/VRV Board Only</option>
+            </select>
+            <input type="text" id="repDefect" class="p-2 border rounded text-xs" placeholder="စက်ပြစ်ချက် အသေးစိတ်">
+          </div>
+        </div>
+        <div id="relocationBox" class="hidden p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+          <span class="block text-xs font-bold text-blue-900">Relocation အသေးစိတ်:</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            <select id="repRelocateType" class="p-2 border rounded bg-white">
+              <option value="Wash & Reinstall Same Site">ဖြုတ်ဆေးပြီး မူလနေရာတွင် ပြန်တပ်မည်</option>
+              <option value="Move to New Address">လိပ်စာအသစ်သို့ ရွှေ့ပြောင်းတပ်ဆင်မည်</option>
+            </select>
+            <input type="text" id="repNewAddress" class="p-2 border rounded" placeholder="လိပ်စာအသစ်">
+          </div>
+        </div>
+        <div><label class="block text-xs font-bold text-gray-700 mb-1">သုံးစွဲခဲ့သည့် အပိုပစ္စည်းနှင့် ပစ္စည်းများ</label>
+          <textarea id="repMaterials" rows="2" class="w-full p-2 border rounded-lg text-sm" placeholder="ဥပမာ - Copper Pipe, R32 Gas"></textarea></div>
+        <div class="p-3 bg-red-50 border border-red-200 rounded-lg space-y-2">
+          <span class="block text-xs font-bold text-red-900">⚠️ အကူအညီ / အပိုလိုအပ်ချက်များ တောင်းခံရန်</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            <select id="repReqType" class="p-2 border rounded bg-white">
+              <option value="None">မလိုပါ (None)</option>
+              <option value="Extra Helpers">လူအင်အား ထပ်မံလိုအပ်သည်</option>
+              <option value="Special Tools/Transport">အထူးကိရိယာ / ကား လိုအပ်သည်</option>
+              <option value="Supervisor Support">Supervisor တိုက်ရိုက် ကူညီမှု လိုအပ်သည်</option>
+            </select>
+            <select id="repReqUrgency" class="p-2 border rounded bg-white">
+              <option value="Normal">ပုံမှန် (Normal)</option>
+              <option value="Urgent">အရေးပေါ် (Urgent)</option>
+            </select>
+          </div>
+        </div>
+        <div><label class="block text-xs font-bold text-gray-700 mb-1">လုပ်ငန်းပြီးစီးမှု အခြေအနေနှင့် မှတ်ချက်</label>
+          <textarea id="repStatus" rows="2" required class="w-full p-2 border rounded-lg text-sm" placeholder="လုပ်ငန်း 100% ပြီးစီး..."></textarea></div>
+        <button id="submitBtn" type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 shadow">Supervisor ထံ တင်ပြမည်</button>
+      </form>
+    </div>
+
+    <div id="workshopSection" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
+      <h3 class="font-bold text-lg border-b pb-2 text-gray-800">🔧 ရုံးတွင်း စက်အဝင်အထွက် စီမံမှု</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left text-gray-600 border">
+          <thead class="bg-gray-100 uppercase text-gray-700"><tr>
+            <th class="p-2 border">ရက်စွဲ</th><th class="p-2 border">စက်အမျိုးအစား</th><th class="p-2 border">ဖောက်သည်/အဖွဲ့</th><th class="p-2 border">ပြစ်ချက်</th><th class="p-2 border">အခြေအနေ</th>
+          </tr></thead>
+          <tbody id="workshopTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="supervisorSection" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-lg text-gray-800">✅ အစီရင်ခံစာများ စစ်ဆေးရေး</h3>
+        <div class="space-x-1 text-xs">
+          <button onclick="filterReports('All')" class="px-2 py-1 bg-gray-200 rounded">အားလုံး</button>
+          <button onclick="filterReports('Pending')" class="px-2 py-1 bg-amber-100 text-amber-800 rounded">စစ်ဆေးရန်ကျန်</button>
+          <button onclick="filterReports('Approved')" class="px-2 py-1 bg-green-100 text-green-800 rounded">အတည်ပြုပြီး</button>
+        </div>
+      </div>
+      <div id="reportList" class="space-y-3"></div>
+    </div>
+
+    <div id="reportExportSection" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-3 gap-2">
+        <div>
+          <h3 class="font-bold text-lg text-gray-800">📄 လစဉ်/နှစ်ချုပ် စာရင်းချုပ် (PDF)</h3>
+          <p class="text-xs text-gray-500">A4 PDF ထုတ်ယူနိုင်ပါသည်</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="exportSummaryPDF('Monthly')" class="bg-red-600 text-white text-xs px-3 py-2 rounded font-bold hover:bg-red-700 shadow">လစဉ် PDF</button>
+          <button onclick="exportSummaryPDF('Annual')" class="bg-indigo-700 text-white text-xs px-3 py-2 rounded font-bold hover:bg-indigo-800 shadow">နှစ်ချုပ် PDF</button>
+        </div>
+      </div>
+      <div id="printableReport" class="p-6 bg-white border rounded-lg space-y-4">
+        <div class="text-center border-b pb-4">
+          <h2 class="text-xl font-bold text-blue-900">TODAY AIRCON SERVICE DEPARTMENT</h2>
+          <p class="text-xs text-gray-600">Monthly / Annual Operational Summary Report</p>
+          <p class="text-xs text-blue-600 font-bold mt-1" id="pdfReportPeriod"></p>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+          <div class="p-3 border rounded-lg bg-blue-50"><span class="block text-xs text-blue-700 font-bold">စုစုပေါင်း လုပ်ငန်း</span><span id="statTotalJobs" class="text-lg font-bold text-blue-900">0</span></div>
+          <div class="p-3 bg-green-50 border rounded-lg"><span class="block text-xs text-green-700 font-bold">အတည်ပြုပြီး</span><span id="statApproved" class="text-lg font-bold text-green-900">0</span></div>
+          <div class="p-3 bg-amber-50 border rounded-lg"><span class="block text-xs text-amber-700 font-bold">ရုံးတွင်းပြင်ဆင်မှု</span><span id="statWorkshop" class="text-lg font-bold text-amber-900">0</span></div>
+          <div class="p-3 bg-purple-50 border rounded-lg"><span class="block text-xs text-purple-700 font-bold">Relocation</span><span id="statRelocation" class="text-lg font-bold text-purple-900">0</span></div>
+        </div>
+        <div>
+          <h4 class="font-bold text-xs text-gray-700 mb-2">လုပ်ငန်းခွင်အလိုက် အသေးစိတ် စာရင်းချုပ်:</h4>
+          <table class="w-full text-xs text-left border">
+            <thead class="bg-gray-100"><tr>
+              <th class="p-2 border">ရက်စွဲ</th><th class="p-2 border">အဖွဲ့/Leader</th><th class="p-2 border">အမျိုးအစား</th><th class="p-2 border">သုံးစွဲပစ္စည်း</th><th class="p-2 border">အခြေအနေ</th>
+            </tr></thead>
+            <tbody id="summaryTableBody"></tbody>
+          </table>
+        </div>
+        <div class="pt-8 grid grid-cols-2 text-center text-xs text-gray-600">
+          <div><p class="border-t w-32 mx-auto pt-1 font-bold">Supervisor လက်မှတ်</p></div>
+          <div><p class="border-t w-32 mx-auto pt-1 font-bold">Service Manager လက်မှတ်</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, orderBy, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ====== ဒီနေရာမှာ Firebase config ကို ကိုယ့်ဟာနဲ့ အစားထိုးပါ (README ကြည့်ပါ) ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDPHRX5fBpQDe7ijtnbNiBQf_GKVoZ0nws",
+  authDomain: "today-aircon.firebaseapp.com",
+  projectId: "today-aircon",
+  storageBucket: "today-aircon.firebasestorage.app",
+  messagingSenderId: "285889172168",
+  appId: "1:285889172168:web:2c61c1dc286b7fe7f94bfd"
+};
+/* ================================================================================ */
+
+const configured = !firebaseConfig.apiKey.startsWith("PASTE");
+let auth, db;
+let currentUser = null, reports = [], unsub = null, registering = false, currentFilter = 'All';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toEmail = p => p.replace(/[^0-9+]/g, '') + '@todayaircon.app';
+const show = (id, on) => $(id).classList.toggle('hidden', !on);
+
+function showError(msg) { const el = $('authError'); el.textContent = msg; el.classList.toggle('hidden', !msg); }
+function friendly(e) {
+  const c = e.code || '';
+  if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')) return 'ဖုန်းနံပါတ် သို့မဟုတ် စကားဝှက် မှားနေပါသည်';
+  if (c.includes('email-already-in-use')) return 'ဤဖုန်းနံပါတ်ဖြင့် အကောင့်ရှိပြီးသားပါ';
+  if (c.includes('weak-password')) return 'စကားဝှက် အနည်းဆုံး ၆ လုံး လိုပါသည်';
+  if (c.includes('network')) return 'အင်တာနက် ချိတ်ဆက်မှု စစ်ဆေးပါ';
+  return 'အမှားရှိသည်: ' + (e.message || c);
+}
+
+if (!configured) {
+  $('loading').innerHTML = '⚠️ Firebase config မထည့်ရသေးပါ။ index.html ထဲက <b>firebaseConfig</b> ကို ဖြည့်ပါ (README ကြည့်ပါ)။';
+} else {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app); db = getFirestore(app);
+  $('repDate').value = new Date().toISOString().slice(0, 10);
+
+  onAuthStateChanged(auth, async user => {
+    if (registering) return;
+    if (!user) { currentUser = null; if (unsub) unsub(); showAuth(); return; }
+    await enter(user);
+  });
+}
+
+function showAuth() { show('loading', false); show('mainApp', false); show('userBadge', false); show('authSection', true); }
+
+async function enter(user, tries = 0) {
+  const snap = await getDoc(doc(db, 'users', user.uid));
+  if (!snap.exists()) {
+    if (tries < 3) return setTimeout(() => enter(user, tries + 1), 800);
+    showError('အကောင့်အချက်အလက် မတွေ့ပါ'); await signOut(auth); return;
+  }
+  currentUser = { uid: user.uid, ...snap.data() };
+  show('loading', false); show('authSection', false); show('mainApp', true); show('userBadge', true);
+  $('userNameDisplay').textContent = currentUser.name;
+  $('userRoleDisplay').textContent = currentUser.role;
+  $('roleTag').textContent = currentUser.role;
+  const r = currentUser.role;
+  const field = ['Helper/Trainee', 'Second Leader', 'Leader'].includes(r);
+  const sup = ['Field Supervisor', 'Manager'].includes(r);
+  show('fieldReportSection', field);
+  show('workshopSection', r === 'Workshop Supervisor' || r === 'Manager');
+  show('supervisorSection', sup);
+  show('reportExportSection', sup);
+  if (unsub) unsub();
+  if (field) { renderAll(); return; }   // field staff don't need to read all reports
+  unsub = onSnapshot(query(collection(db, 'reports'), orderBy('createdAt', 'desc')), s => {
+    reports = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAll();
+  }, err => console.error(err));
+}
+
+window.switchAuthTab = tab => {
+  showError('');
+  const login = tab === 'login';
+  show('loginForm', login); show('registerForm', !login);
+  $('loginTabBtn').className = 'w-1/2 py-2 font-bold text-center ' + (login ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500');
+  $('regTabBtn').className = 'w-1/2 py-2 font-bold text-center ' + (!login ? 'border-b-2 border-green-600 text-green-600' : 'text-gray-500');
+};
+
+window.handleLogin = async e => {
+  e.preventDefault(); showError('');
+  try { await signInWithEmailAndPassword(auth, toEmail($('loginPhone').value), $('loginPass').value); }
+  catch (err) { showError(friendly(err)); }
+};
+
+window.handleRegister = async e => {
+  e.preventDefault(); showError('');
+  registering = true;
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, toEmail($('regPhone').value), $('regPass').value);
+    await setDoc(doc(db, 'users', cred.user.uid), {
+      name: $('regName').value.trim(), phone: $('regPhone').value.trim(), role: $('regRole').value, createdAt: serverTimestamp()
+    });
+    registering = false; await enter(cred.user);
+  } catch (err) { registering = false; showError(friendly(err)); }
+};
+
+window.logout = () => signOut(auth);
+window.toggleJobFields = () => show('relocationBox', $('repJobType').value === 'Relocation');
+window.togglePickupDetails = () => show('pickupDetails', $('repPickupReq').checked);
+
+window.submitReport = async e => {
+  e.preventDefault();
+  const btn = $('submitBtn'); btn.disabled = true; btn.textContent = 'တင်နေသည်...';
+  const pickup = $('repPickupReq').checked;
+  try {
+    await addDoc(collection(db, 'reports'), {
+      date: $('repDate').value, team: $('repTeam').value.trim(), customer: $('repCustomer').value.trim(),
+      jobType: $('repJobType').value, pickupReq: pickup,
+      applianceType: $('repApplianceType').value, defect: $('repDefect').value.trim(),
+      relocateType: $('repRelocateType').value, newAddress: $('repNewAddress').value.trim(),
+      materials: $('repMaterials').value.trim(), reqType: $('repReqType').value, reqUrgency: $('repReqUrgency').value,
+      status: $('repStatus').value.trim(), approval: 'Pending', workshopStatus: pickup ? 'Intake' : 'N/A',
+      createdBy: currentUser.uid, createdByName: currentUser.name, createdAt: serverTimestamp()
+    });
+    alert('အစီရင်ခံစာ တင်ပြပြီးပါပြီ။');
+    $('dailyReportForm').reset(); $('repDate').value = new Date().toISOString().slice(0, 10);
+    show('pickupDetails', false); show('relocationBox', false);
+  } catch (err) { alert('တင်ပြ၍ မရပါ: ' + err.message); }
+  btn.disabled = false; btn.textContent = 'Supervisor ထံ တင်ပြမည်';
+};
+
+window.approveReport = async id => { await updateDoc(doc(db, 'reports', id), { approval: 'Approved', approvedBy: currentUser.name }); };
+window.updateWorkshopStatus = async (id, val) => { await updateDoc(doc(db, 'reports', id), { workshopStatus: val }); };
+window.filterReports = f => { currentFilter = f; renderReportsList(); };
+
+function renderAll() { renderWorkshopTable(); renderReportsList(); renderSummary('Monthly'); }
+
+function renderReportsList() {
+  const c = $('reportList'); c.innerHTML = '';
+  const list = currentFilter === 'All' ? reports : reports.filter(r => r.approval === currentFilter);
+  if (!list.length) { c.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">အစီရင်ခံစာများ မရှိသေးပါ</p>'; return; }
+  const canApprove = ['Field Supervisor', 'Manager'].includes(currentUser.role);
+  list.forEach(r => {
+    const d = document.createElement('div');
+    d.className = 'p-4 border rounded-lg bg-gray-50 space-y-2 text-xs';
+    d.innerHTML = `
+      <div class="flex justify-between items-start">
+        <div>
+          <span class="font-bold text-sm text-blue-800">${esc(r.customer)}</span>
+          <span class="ml-2 text-gray-500">(${esc(r.date)})</span>
+          <span class="block font-semibold text-gray-700">Team: ${esc(r.team)} | Type: ${esc(r.jobType)}</span>
+          <span class="block text-gray-500">တင်သူ: ${esc(r.createdByName)}</span>
+        </div>
+        <span class="px-2 py-0.5 rounded text-white font-bold ${r.approval === 'Approved' ? 'bg-green-600' : 'bg-amber-500'}">${esc(r.approval)}</span>
+      </div>
+      ${r.pickupReq ? `<p class="text-amber-800 bg-amber-100 p-1 rounded font-bold">⚠️ Workshop သို့ယူရမည်: ${esc(r.applianceType)} (${esc(r.defect || 'မပါ')})</p>` : ''}
+      ${r.jobType === 'Relocation' ? `<p class="text-blue-800 bg-blue-100 p-1 rounded">Relocation: ${esc(r.relocateType)} ${esc(r.newAddress)}</p>` : ''}
+      ${r.reqType && r.reqType !== 'None' ? `<p class="text-red-800 bg-red-100 p-1 rounded font-bold">တောင်းခံချက်: ${esc(r.reqType)} (${esc(r.reqUrgency)})</p>` : ''}
+      <p class="text-gray-600"><strong>သုံးစွဲပစ္စည်း:</strong> ${esc(r.materials || '-')}</p>
+      <p class="text-gray-600"><strong>အခြေအနေ:</strong> ${esc(r.status)}</p>
+      ${canApprove && r.approval === 'Pending' ? `<div class="pt-2"><button onclick="approveReport('${esc(r.id)}')" class="bg-green-600 text-white px-3 py-1 rounded font-bold">အတည်ပြုမည် (Approve)</button></div>` : ''}`;
+    c.appendChild(d);
+  });
+}
+
+function renderWorkshopTable() {
+  const tb = $('workshopTableBody'); tb.innerHTML = '';
+  const list = reports.filter(r => r.pickupReq);
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-400">ရုံးတွင်း ပြင်ဆင်ရန် စက်များမရှိပါ</td></tr>'; return; }
+  const opts = [['Intake','Intake (ရောက်ရှိ)'],['Repairing','Repairing (ပြင်ဆင်နေ)'],['Testing','Testing (စမ်းသပ်နေ)'],['Delivered','Delivered (အပ်နှံပြီး)']];
+  const editable = currentUser.role === 'Workshop Supervisor';
+  list.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="p-2 border">${esc(r.date)}</td>
+      <td class="p-2 border font-bold">${esc(r.applianceType)}</td>
+      <td class="p-2 border">${esc(r.customer)} (${esc(r.team)})</td>
+      <td class="p-2 border">${esc(r.defect || '-')}</td>
+      <td class="p-2 border">${editable
+        ? `<select onchange="updateWorkshopStatus('${esc(r.id)}', this.value)" class="p-1 border rounded bg-white text-xs">${opts.map(o => `<option value="${o[0]}" ${r.workshopStatus === o[0] ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>`
+        : esc(r.workshopStatus)}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function periodList(period) {
+  const now = new Date(), y = String(now.getFullYear()), ym = y + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  return reports.filter(r => (r.date || '').startsWith(period === 'Annual' ? y : ym));
+}
+
+function renderSummary(period) {
+  const list = periodList(period);
+  $('pdfReportPeriod').textContent = `Period: ${period} Summary Report (${new Date().toLocaleDateString()})`;
+  $('statTotalJobs').textContent = list.length;
+  $('statApproved').textContent = list.filter(r => r.approval === 'Approved').length;
+  $('statWorkshop').textContent = list.filter(r => r.pickupReq).length;
+  $('statRelocation').textContent = list.filter(r => r.jobType === 'Relocation').length;
+  const tb = $('summaryTableBody'); tb.innerHTML = '';
+  list.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="p-2 border">${esc(r.date)}</td><td class="p-2 border">${esc(r.team)}</td><td class="p-2 border">${esc(r.jobType)}</td><td class="p-2 border">${esc(r.materials || '-')}</td><td class="p-2 border">${esc(r.approval)}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+window.exportSummaryPDF = period => {
+  renderSummary(period);
+  html2canvas($('printableReport'), { scale: 2 }).then(canvas => {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const w = 210, pageH = 297, h = canvas.height * w / canvas.width;
+    const img = canvas.toDataURL('image/png');
+    let left = h, pos = 0;
+    pdf.addImage(img, 'PNG', 0, pos, w, h); left -= pageH;
+    while (left > 0) { pos -= pageH; pdf.addPage(); pdf.addImage(img, 'PNG', 0, pos, w, h); left -= pageH; }
+    pdf.save(`Today_Aircon_${period}_Report.pdf`);
+    renderSummary('Monthly');
+  });
+};
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
