@@ -1,4 +1,4 @@
-const CACHE = 'today-aircon-v4';
+const CACHE = 'today-aircon-simple-v1';
 const SHELL = ['./', './index.html', './manifest.json', './icon.svg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
