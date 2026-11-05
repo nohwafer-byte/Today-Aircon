@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Today Aircon - Service Reports</title>
+  <style>
+    body { font-family: sans-serif; padding: 15px; max-width: 650px; margin: auto; background: #f4f6f9; color: #333; }
+    .card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+    input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+    button:hover { background: #0056b3; }
+    .config-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; margin-bottom: 15px; border-radius: 6px; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; }
+    .status-pending { background: #ffc107; color: #333; }
+    .status-completed { background: #17a2b8; }
+    .status-received { background: #28a745; }
+    .report-item { border-left: 4px solid #007bff; padding-left: 10px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+  <h2>❄️ Today Aircon - ဝန်ထမ်း Report စနစ်</h2>
+
+  <!-- Settings Box (Manager မှ ပထမအကြိမ် သို့မဟုတ် ဝန်ထမ်းများအတွက် ချိတ်ဆက်ရန်) -->
+  <div class="config-box">
+    <details>
+      <summary style="cursor: pointer; font-weight: bold;">⚙️ GitHub Gist ဆက်တင်များ (ချိန်ညှိရန် နှိပ်ပါ)</summary>
+      <input type="text" id="gistId" placeholder="GitHub Gist ID ထည့်ရန်">
+      <input type="password" id="githubToken" placeholder="GitHub Personal Access Token ထည့်ရန်">
+      <button onclick="saveConfig()" style="background: #28a745; margin-top: 5px;">ဆက်တင်များ သိမ်းမည်</button>
+    </details>
+  </div>
+
+  <!-- Report Form -->
+  <div class="card">
+    <h3>📋 Report အသစ်တင်ရန်</h3>
+    <input type="text" id="techName" placeholder="ဝန်ထမ်းအမည်">
+    <input type="text" id="customerName" placeholder="ဖောက်သည်အမည် / တည်နေရာ">
+    <input type="text" id="serviceDetails" placeholder="ဆောင်ရွက်ချက် (ဥပမာ - Gas ဖြည့်၊ ဆားဗစ်)">
+    <button onclick="addNewReport()">Report တင်မည်</button>
+  </div>
+
+  <!-- Reports List -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3>📊 လက်ရှိ Report များ</h3>
+      <button onclick="loadReports()" style="width: auto; padding: 6px 12px; background: #6c757d;">🔄 Refresh</button>
+    </div>
+    <div id="reportList">ဒေတာများကို ဆွဲထုတ်နေသည်...</div>
+  </div>
+
+  <script>
+    // LocalStorage ထဲမှ Config ကို ရယူခြင်း
+    function getConfig() {
+      return {
+        gistId: localStorage.getItem("aircon_gist_id") || "",
+        token: localStorage.getItem("aircon_github_token") || ""
+      };
+    }
+
+    function saveConfig() {
+      const gistId = document.getElementById("gistId").value.trim();
+      const token = document.getElementById("githubToken").value.trim();
+      if (!gistId || !token) return alert("Gist ID နှင့် Token နှစ်ခုလုံး ဖြည့်ပါ။");
+      localStorage.setItem("aircon_gist_id", gistId);
+      localStorage.setItem("aircon_github_token", token);
+      alert("ဆက်တင်များ သိမ်းဆည်းပြီးပါပြီ။");
+      loadReports();
+    }
+
+    // စာမျက်နှာပွင့်လျှင် Config ဖြည့်ပြီးသားဖြစ်စေရန်နှင့် Data ဆွဲရန်
+    window.onload = function() {
+      const config = getConfig();
+      if (config.gistId) document.getElementById("gistId").value = config.gistId;
+      if (config.token) document.getElementById("githubToken").value = config.token;
+      loadReports();
+    };
+
+    // Gist မှ Data များကို ဖတ်ရှုခြင်း
+    async function loadReports() {
+      const config = getConfig();
+      const listEl = document.getElementById("reportList");
+
+      if (!config.gistId) {
+        listEl.innerHTML = "⚠️ ကျေးဇူးပြု၍ အထက်ပါ ဆက်တင်များတွင် GitHub Gist ID နှင့် Token ထည့်ပေးပါ။";
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://api.github.com/gists/${config.gistId}`);
+        const data = await response.json();
+        
+        if (data.files && data.files["aircon_data.json"]) {
+          const reports = JSON.parse(data.files["aircon_data.json"].content);
+          displayReports(reports);
+        } else {
+          listEl.innerHTML = "⚠️ Gist ထဲတွင် aircon_data.json ဖိုင် မတွေ့ပါ။";
+        }
+      } catch (err) {
+        console.error(err);
+        listEl.innerHTML = "❌ ဒေတာ ဆွဲယူရာတွင် အမှားအယွင်း ရှိပါသည်။";
+      }
+    }
+
+    // Report များကို HTML ဖြင့် ဖော်ပြခြင်း
+    function displayReports(reports) {
+      const listEl = document.getElementById("reportList");
+      if (reports.length === 0) {
+        listEl.innerHTML = "<p>Report မရှိသေးပါ။</p>";
+        return;
+      }
+
+      listEl.innerHTML = "";
+      // အသစ်ဆုံးကို အပေါ်တင်ရန်
+      reports.reverse().forEach((rep, index) => {
+        let badgeClass = "status-pending";
+        if (rep.status === "ပြီးဆုံးပြီ") badgeClass = "status-completed";
+        if (rep.status === "လက်ခံရရှိပြီ") badgeClass = "status-received";
+
+        const div = document.createElement("div");
+        div.className = "report-item";
+        div.innerHTML = `
+          <p><b>👤 ဝန်ထမ်း:</b> ${rep.techName} | <small>${rep.date}</small></p>
+          <p><b>🏢 ဖောက်သည်:</b> ${rep.customerName}</p>
+          <p><b>🔧 လုပ်ဆောင်ချက်:</b> ${rep.serviceDetails}</p>
+          <p><b>အခြေအနေ:</b> <span class="badge ${badgeClass}">${rep.status}</span></p>
+          <div style="display: flex; gap: 5px; margin-top: 5px;">
+            <button onclick="updateStatus(${rep.id}, 'ပြီးဆုံးပြီ')" style="background: #17a2b8; padding: 5px;">✅ ပြီးဆုံးကြောင်းပြရန်</button>
+            <button onclick="updateStatus(${rep.id}, 'လက်ခံရရှိပြီ')" style="background: #28a745; padding: 5px;">👍 လက်ခံကြောင်းပြရန်</button>
+          </div>
+          <hr style="border:0; border-top:1px solid #eee; margin: 10px 0;">
+        `;
+        listEl.appendChild(div);
+      });
+    }
+
+    // Report အသစ် ထည့်သွင်းခြင်း
+    async function addNewReport() {
+      const techName = document.getElementById("techName").value.trim();
+      const customerName = document.getElementById("customerName").value.trim();
+      const serviceDetails = document.getElementById("serviceDetails").value.trim();
+
+      if (!techName || !customerName || !serviceDetails) return alert("အချက်အလက်များ အားလုံး ဖြည့်ပါ။");
+
+      const config = getConfig();
+      if (!config.gistId || !config.token) return alert("ပထမဦးစွာ Gist ID နှင့် Token ကို ဆက်တင်တွင် ထည့်ပါ။");
+
+      try {
+        // လက်ရှိ data ကို အရင်ဆွဲမည်
+        const res = await fetch(`https://api.github.com/gists/${config.gistId}`);
+        const data = await res.json();
+        let reports = [];
+        if (data.files && data.files["aircon_data.json"]) {
+          reports = JSON.parse(data.files["aircon_data.json"].content);
+        }
+
+        const newRep = {
+          id: Date.now(),
+          techName,
+          customerName,
+          serviceDetails,
+          status: "လုပ်ဆောင်ဆဲ",
+          date: new Date().toLocaleString()
+        };
+
+        reports.push(newRep);
+
+        // GitHub Gist သို့ ပို့မည် (Update)
+        await updateGist(reports);
+
+        document.getElementById("techName").value = "";
+        document.getElementById("customerName").value = "";
+        document.getElementById("serviceDetails").value = "";
+        loadReports();
+        alert("Report တင်ခြင်း အောင်မြင်ပါသည်။");
+      } catch (err) {
+        alert("Report တင်၍ မရပါ။ အမှားအယွင်းရှိသည်။");
+      }
+    }
+
+    // အခြေအနေ (Status) ပြောင်းလဲခြင်း
+    async function updateStatus(id, newStatus) {
+      const config = getConfig();
+      try {
+        const res = await fetch(`https://api.github.com/gists/${config.gistId}`);
+        const data = await res.json();
+        let reports = JSON.parse(data.files["aircon_data.json"].content);
+
+        reports = reports.map(rep => {
+          if (rep.id === id) rep.status = newStatus;
+          return rep;
+        });
+
+        await updateGist(reports);
+        loadReports();
+      } catch (err) {
+        alert("Status ပြောင်းလဲ၍ မရပါ။");
+      }
+    }
+
+    // GitHub Gist API သို့ ဒေတာ အပ်ဒိတ်လုပ်သည့် Function
+    async function updateGist(reportsArray) {
+      const config = getConfig();
+      await fetch(`https://api.github.com/gists/${config.gistId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `token ${config.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files: {
+            "aircon_data.json": {
+              content: JSON.stringify(reportsArray, null, 2)
+            }
+          }
+        })
+      });
+    }
+  </script>
+</body>
+</html>
