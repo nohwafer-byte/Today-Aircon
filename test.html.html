@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="my"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connection Test</title>
+<style>
+body{font-family:'Myanmar Text','Noto Sans Myanmar',sans-serif;padding:16px;background:#f3f4f6;color:#111}
+.card{background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;font-size:14px;word-break:break-word}
+.ok{border-left:6px solid #16a34a}.bad{border-left:6px solid #dc2626}.wait{border-left:6px solid #d97706}
+button{padding:10px 16px;background:#2563eb;color:#fff;border:0;border-radius:8px;font-size:14px}
+small{color:#555}
+</style></head><body>
+<h3>Firebase ချိတ်ဆက်မှု စစ်ဆေးခြင်း</h3>
+<button onclick="run()">ပြန်စစ်မည်</button>
+<div id="out" style="margin-top:12px"></div>
+<script>
+const KEY="AIzaSyDPHRX5fBpQDe7ijtnbNiBQf_GKVoZ0nws", PID="today-aircon";
+const out=document.getElementById('out');
+function card(title){const d=document.createElement('div');d.className='card wait';d.innerHTML='<b>'+title+'</b><br><small>စစ်နေသည်...</small>';out.appendChild(d);return d}
+function done(d,title,ok,msg,ms){d.className='card '+(ok?'ok':'bad');d.innerHTML='<b>'+(ok?'✅ ':'❌ ')+title+'</b> <small>('+ms+' ms)</small><br>'+msg}
+async function t(title,fn){const d=card(title);const s=Date.now();
+  const c=new AbortController();const to=setTimeout(()=>c.abort(),15000);
+  try{const r=await fn(c.signal);done(d,title,r.ok,r.msg,Date.now()-s)}
+  catch(e){done(d,title,false,(e.name==='AbortError'?'၁၅ စက္ကန့်ကြာပြီး ပြန်မလာပါ (ပိတ်ထားနိုင်သည်)':'ချိတ်မရပါ: '+e.message),Date.now()-s)}
+  finally{clearTimeout(to)}}
+async function run(){
+  out.innerHTML='';
+  await t('၁။ Firebase code (gstatic.com)',async sig=>{
+    const r=await fetch('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js',{signal:sig});
+    return {ok:r.ok,msg:'HTTP '+r.status}});
+  await t('၂။ Login ဆာဗာ (Authentication)',async sig=>{
+    const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+KEY,
+      {method:'POST',headers:{'Content-Type':'application/json'},signal:sig,
+       body:JSON.stringify({email:'test0000@todayaircon.app',password:'wrongpass1',returnSecureToken:true})});
+    const j=await r.json();const m=(j.error&&j.error.message)||'';
+    if(m.includes('OPERATION_NOT_ALLOWED'))return{ok:false,msg:'ချိတ်မိသည်၊ ဒါပေမဲ့ <b>Email/Password ကို Firebase မှာ မဖွင့်ရသေးပါ</b> (Authentication → Sign-in method)'};
+    if(m.includes('INVALID_LOGIN')||m.includes('EMAIL_NOT_FOUND')||m.includes('INVALID_PASSWORD'))return{ok:true,msg:'ချိတ်မိသည်၊ Email/Password ဖွင့်ထားသည် ('+m+')'};
+    return{ok:false,msg:'ပြန်လာတာ: '+(m||JSON.stringify(j))}});
+  await t('၃။ Database ဆာဗာ (Firestore)',async sig=>{
+    const r=await fetch('https://firestore.googleapis.com/v1/projects/'+PID+'/databases/(default)/documents/users',{signal:sig});
+    const j=await r.json().catch(()=>({}));const m=(j.error&&j.error.status)||'';
+    if(r.status===403||r.status===401||m==='PERMISSION_DENIED'||m==='UNAUTHENTICATED')return{ok:true,msg:'ချိတ်မိသည် (login မဝင်ရသေးလို့ ပိတ်ထားတာ ပုံမှန်ဖြစ်သည်)'};
+    return{ok:r.ok,msg:'HTTP '+r.status+' '+m}});
+}
+run();
+</script></body></html>
