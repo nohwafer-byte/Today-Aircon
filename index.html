@@ -222,7 +222,16 @@
   </div>
 </div>
 
+<script>
+setTimeout(function(){
+  if(!window.__started){
+    var l=document.getElementById('loading');
+    if(l) l.innerHTML='<p class="text-red-600 mb-3">⚠️ Firebase ကို ချိတ်ဆက်မရပါ။ အင်တာနက် စစ်ပြီး ပြန်ဖွင့်ပါ။ (VPN ဖွင့်ကြည့်ပါ)</p><button onclick="location.reload()" class="px-3 py-2 bg-blue-600 text-white rounded text-xs">ပြန်ကြိုးစားမည်</button>';
+  }
+},15000);
+</script>
 <script type="module">
+window.__started = true;
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -272,32 +281,49 @@ if (!configured) {
   });
 }
 
+function fail(err) {
+  console.error(err);
+  show('authSection', false); show('mainApp', false); show('userBadge', false); show('loading', true);
+  const code = err && (err.code || err.message) || String(err);
+  let hint = '';
+  if (String(code).includes('permission-denied')) hint = ' (Firestore Rules စစ်ပါ)';
+  if (String(code).includes('unavailable') || String(code).includes('network')) hint = ' (အင်တာနက်/Firebase ချိတ်ဆက်မှု စစ်ပါ)';
+  $('loading').innerHTML = '<p class="text-red-600 mb-3 text-xs break-words">⚠️ ' + esc(code) + esc(hint) + '</p>' +
+    '<button onclick="location.reload()" class="px-3 py-2 bg-blue-600 text-white rounded text-xs mr-2">ပြန်ကြိုးစားမည်</button>' +
+    '<button onclick="logout()" class="px-3 py-2 bg-gray-300 rounded text-xs">ထွက်မည်</button>';
+}
+
 function showAuth() { show('loading', false); show('mainApp', false); show('userBadge', false); show('authSection', true); }
 
-async function enter(user, tries = 0) {
-  const snap = await getDoc(doc(db, 'users', user.uid));
-  if (!snap.exists()) {
-    if (tries < 3) return setTimeout(() => enter(user, tries + 1), 800);
-    showError('အကောင့်အချက်အလက် မတွေ့ပါ'); await signOut(auth); return;
-  }
-  currentUser = { uid: user.uid, ...snap.data() };
-  show('loading', false); show('authSection', false); show('mainApp', true); show('userBadge', true);
-  $('userNameDisplay').textContent = currentUser.name;
-  $('userRoleDisplay').textContent = currentUser.role;
-  $('roleTag').textContent = currentUser.role;
-  const r = currentUser.role;
-  const field = ['Helper/Trainee', 'Second Leader', 'Leader'].includes(r);
-  const sup = ['Field Supervisor', 'Manager'].includes(r);
-  show('fieldReportSection', field);
-  show('workshopSection', r === 'Workshop Supervisor' || r === 'Manager');
-  show('supervisorSection', sup);
-  show('reportExportSection', sup);
-  if (unsub) unsub();
-  if (field) { renderAll(); return; }   // field staff don't need to read all reports
-  unsub = onSnapshot(query(collection(db, 'reports'), orderBy('createdAt', 'desc')), s => {
-    reports = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderAll();
-  }, err => console.error(err));
+async function enter(user) {
+  try {
+    const ref = doc(db, 'users', user.uid);
+    let snap = await getDoc(ref);
+    if (!snap.exists()) {
+      // profile missing (e.g. interrupted sign-up): create a basic one
+      const phone = (user.email || '').split('@')[0];
+      await setDoc(ref, { name: phone, phone, role: 'Helper/Trainee', createdAt: serverTimestamp() });
+      snap = await getDoc(ref);
+    }
+    currentUser = { uid: user.uid, ...snap.data() };
+    show('loading', false); show('authSection', false); show('mainApp', true); show('userBadge', true);
+    $('userNameDisplay').textContent = currentUser.name;
+    $('userRoleDisplay').textContent = currentUser.role;
+    $('roleTag').textContent = currentUser.role;
+    const r = currentUser.role;
+    const field = ['Helper/Trainee', 'Second Leader', 'Leader'].includes(r);
+    const sup = ['Field Supervisor', 'Manager'].includes(r);
+    show('fieldReportSection', field);
+    show('workshopSection', r === 'Workshop Supervisor' || r === 'Manager');
+    show('supervisorSection', sup);
+    show('reportExportSection', sup);
+    if (unsub) unsub();
+    if (field) { renderAll(); return; }
+    unsub = onSnapshot(query(collection(db, 'reports'), orderBy('createdAt', 'desc')), s => {
+      reports = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderAll();
+    }, err => fail(err));
+  } catch (err) { fail(err); }
 }
 
 window.switchAuthTab = tab => {
