@@ -1,240 +1,146 @@
 <!DOCTYPE html>
-<html lang="my">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1e40af">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
+<html lang="my"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#1e40af">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg">
 <title>Today Aircon Service Department</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<style>body{font-family:'Segoe UI',Tahoma,'Myanmar Text','Noto Sans Myanmar',sans-serif;background:#f3f4f6}.f{width:100%;padding:.5rem;border:1px solid #d1d5db;border-radius:.5rem;font-size:.875rem;background:#fff}.l{display:block;font-size:.75rem;font-weight:700;color:#374151;margin-bottom:.25rem}</style>
-</head>
-<body class="pb-12">
-<nav class="bg-blue-800 text-white p-4 shadow-lg sticky top-0 z-50">
-  <div class="max-w-3xl mx-auto flex justify-between items-center">
-    <div><h1 class="font-bold">❄️ Today Aircon Service</h1><p class="text-xs text-blue-200">Daily Reporting</p></div>
-    <div id="who" class="hidden text-right text-xs"><b id="whoName"></b><br><span id="whoRole" class="text-blue-200"></span> <button onclick="resetUser()" class="underline text-red-300 ml-1">ပြောင်းမည်</button></div>
-  </div>
-</nav>
-<div class="max-w-3xl mx-auto p-4 space-y-5">
+<style>body{font-family:'Segoe UI',Tahoma,'Myanmar Text','Noto Sans Myanmar',sans-serif;background:#f3f4f6}.f{width:100%;padding:.5rem;border:1px solid #d1d5db;border-radius:.5rem;font-size:.875rem;background:#fff}.l{display:block;font-size:.75rem;font-weight:700;color:#374151;margin-bottom:.25rem}.b{padding:.4rem .75rem;border-radius:.5rem;color:#fff;font-weight:700;font-size:.75rem}.c{background:#fff;padding:1.25rem;border-radius:.75rem;box-shadow:0 1px 3px #0002}</style>
+</head><body class="pb-12">
+<nav class="bg-blue-800 text-white p-4 shadow sticky top-0 z-50"><div class="max-w-3xl mx-auto flex justify-between items-center">
+<div><b>❄️ Today Aircon Service</b><p class="text-xs text-blue-200">Report & Operation Tracking</p></div>
+<div id="who" class="hidden text-right text-xs"><b id="wn"></b><br><span id="wr" class="text-blue-200"></span> <button onclick="resetUser()" class="underline text-red-300">ပြောင်း</button></div></div></nav>
+<div class="max-w-3xl mx-auto p-4 space-y-4">
 
-<!-- SETUP -->
-<div id="setup" class="hidden bg-white p-6 rounded-xl shadow max-w-md mx-auto mt-6 space-y-3">
-  <h2 class="font-bold text-lg text-center">စတင်အသုံးပြုရန်</h2>
-  <div><label class="l">အမည်</label><input id="sName" class="f" placeholder="ကိုမောင်မောင်"></div>
-  <div><label class="l">ရာထူး</label>
-    <select id="sRole" class="f" onchange="document.getElementById('pinBox').classList.toggle('hidden',this.value==='field')">
-      <option value="field">ကွင်းဆင်းဝန်ထမ်း (Helper / Leader)</option>
-      <option value="workshop">Workshop Supervisor</option>
-      <option value="supervisor">Field Supervisor / Manager</option>
-    </select></div>
-  <div id="pinBox" class="hidden"><label class="l">Supervisor PIN</label><input id="sPin" type="password" inputmode="numeric" class="f" placeholder="PIN"></div>
-  <p id="sErr" class="text-xs text-red-600 hidden"></p>
-  <button onclick="doSetup()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold">ဆက်သွားမည်</button>
-</div>
+<div id="setup" class="hidden c max-w-md mx-auto space-y-3"><h2 class="font-bold text-center">စတင်အသုံးပြုရန်</h2>
+<div><label class="l">အမည်</label><input id="sN" class="f"></div>
+<div><label class="l">အဖွဲ့အမည် (Team)</label><input id="sT" class="f" placeholder="Team A"></div>
+<div><label class="l">ရာထူး</label><select id="sR" class="f" onchange="pinB.classList.toggle('hidden',!PIN[this.value])">
+<option value="second">Service Second Leader</option><option value="leader">Service Leader</option>
+<option value="supA">Supervisor A (ရုံး/နည်းပညာသီအိုရီ)</option><option value="supB">Supervisor B (ရုံးတွင်းစက်ပြင်)</option><option value="manager">Service Manager</option></select></div>
+<div id="pinB" class="hidden"><label class="l">PIN</label><input id="sP" type="password" inputmode="numeric" class="f"></div>
+<p id="sE" class="text-xs text-red-600"></p><button onclick="doSetup()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold">ဆက်သွားမည်</button></div>
 
-<!-- FIELD FORM -->
-<div id="fieldSec" class="hidden bg-white p-5 rounded-xl shadow space-y-3">
-  <h3 class="font-bold border-b pb-2">📝 နေ့စဉ်လုပ်ငန်း တင်ပြရန်</h3>
-  <form id="rf" onsubmit="submitReport(event)" class="space-y-3">
-    <div class="grid md:grid-cols-2 gap-3">
-      <div><label class="l">ရက်စွဲ</label><input type="date" id="rDate" required class="f"></div>
-      <div><label class="l">အဖွဲ့ / Leader</label><input id="rTeam" required class="f" placeholder="Team A (Kyaw Kyaw)"></div>
-      <div><label class="l">ဖောက်သည် / Site</label><input id="rCust" required class="f" placeholder="U Ba / Kamayut"></div>
-      <div><label class="l">လုပ်ငန်းအမျိုးအစား</label>
-        <select id="rJob" class="f" onchange="rel.classList.toggle('hidden',this.value!=='Relocation')">
-          <option>Home Inspection</option><option>Relocation</option><option>Site Project</option><option>Routine Servicing</option>
-        </select></div>
-    </div>
-    <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
-      <label class="flex items-center gap-2 text-xs font-bold text-amber-900"><input type="checkbox" id="rPick" onchange="pk.classList.toggle('hidden',!this.checked)"> Workshop သို့ သယ်ပြင်ရန် လိုအပ်သည်</label>
-      <div id="pk" class="hidden grid md:grid-cols-2 gap-2">
-        <select id="rApp" class="f"><option>Refrigerator</option><option>Washing Machine</option><option>Split Aircon</option><option>Inverter / VRF Board</option></select>
-        <input id="rDef" class="f" placeholder="ပြစ်ချက် အသေးစိတ်">
-      </div>
-    </div>
-    <div id="rel" class="hidden p-3 bg-blue-50 border border-blue-200 rounded-lg grid md:grid-cols-2 gap-2">
-      <select id="rRelT" class="f"><option>Wash & Reinstall Same Site</option><option>Move to New Address</option></select>
-      <input id="rAddr" class="f" placeholder="လိပ်စာအသစ်">
-    </div>
-    <div><label class="l">သုံးစွဲပစ္စည်းများ</label><textarea id="rMat" rows="2" class="f" placeholder="Copper Pipe, R32 Gas"></textarea></div>
-    <div class="p-3 bg-red-50 border border-red-200 rounded-lg grid md:grid-cols-2 gap-2">
-      <select id="rReq" class="f"><option value="None">အကူအညီ မလိုပါ</option><option value="Extra Helpers">လူအင်အား ထပ်လိုသည်</option><option value="Special Tools/Transport">ကိရိယာ / ကား လိုသည်</option><option value="Supervisor Support">Supervisor ကူညီမှု လိုသည်</option></select>
-      <select id="rUrg" class="f"><option>Normal</option><option>Urgent</option></select>
-    </div>
-    <div><label class="l">အခြေအနေ / မှတ်ချက်</label><textarea id="rStat" rows="2" required class="f" placeholder="လုပ်ငန်း 100% ပြီးစီး"></textarea></div>
-    <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">သိမ်းပြီး ပို့ရန် ပြင်မည်</button>
-  </form>
-  <h4 class="font-bold text-sm pt-3 border-t">ကျွန်ုပ်တင်ထားသော report များ</h4>
-  <div id="myList" class="space-y-2"></div>
-</div>
+<form id="form" onsubmit="submitJob(event)" class="hidden c space-y-3"><h3 class="font-bold border-b pb-2">📝 နေ့စဉ် Job Report တင်ရန်</h3>
+<p id="toTxt" class="text-xs text-blue-700"></p>
+<div class="grid md:grid-cols-2 gap-3">
+<div><label class="l">ရက်စွဲ</label><input type="date" id="rD" required class="f"></div>
+<div><label class="l">ဖောက်သည် / Site</label><input id="rC" required class="f"></div>
+<div><label class="l">လုပ်ငန်းအမျိုးအစား</label><select id="rJ" class="f"><option>Repair</option><option>Home Inspection</option><option>Relocation</option><option>Site Project</option><option>Routine Servicing</option></select></div>
+<div class="md:col-span-2"><label class="l">လုပ်ငန်းတွင် ပါဝင်သော Helper / Trainee အမည်များ</label><input id="rCr" class="f" placeholder="ကိုအောင်၊ မဝါ"></div>
+<div><label class="l">တင်ပြမည့် Supervisor</label><select id="rSp" class="f"><option value="">မရွေး (Team အတွင်းသာ)</option><option value="A">Supervisor A (ရုံး/စာရင်း/နည်းပညာ)</option><option value="B">Supervisor B (ကွင်းအရည်အသွေး/ဘေးကင်း/ရုံးစက်)</option></select></div></div>
+<div class="p-3 bg-blue-50 rounded-lg space-y-2"><label class="l">စက်အမျိုးအစား</label><select id="rA" class="f" onchange="fillCfg()"></select>
+<input id="rO" class="f hidden" placeholder="စက်အမည်">
+<div class="grid grid-cols-2 gap-2"><select id="rK" class="f"></select><select id="rI" class="f"></select></div>
+<input id="rB" class="f" placeholder="Brand / Model"><label class="l">ပြစ်ချက်</label><div id="rDf" class="grid grid-cols-2 gap-1 text-xs"></div>
+<textarea id="rDt" rows="2" class="f" placeholder="ပြစ်ချက် အသေးစိတ်"></textarea></div>
+<div class="p-3 bg-amber-50 rounded-lg space-y-2"><label class="flex gap-2 text-xs font-bold"><input type="checkbox" id="rW" onchange="wsB.classList.toggle('hidden',!this.checked)"> ရုံး (Workshop) သို့ သယ်လာရမည်</label>
+<div id="wsB" class="hidden space-y-2"><input id="rIt" class="f" placeholder="သယ်လာသော ပစ္စည်း အတိအကျ"><input id="rE" type="number" min="0" class="f" placeholder="ခန့်မှန်း ပြင်ချိန် (ရက်)"></div></div>
+<div><label class="l">Customer ကို ပြောခဲ့သည့် မှတ်ချက်</label><textarea id="rN" rows="2" class="f"></textarea></div>
+<div><label class="l">သုံးပစ္စည်း</label><input id="rM" class="f"></div>
+<div><label class="l">အခြေအနေ / မှတ်ချက်</label><textarea id="rS" rows="2" required class="f"></textarea></div>
+<button class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">သိမ်းပြီး ပို့ရန်</button></form>
 
-<!-- SUPERVISOR -->
-<div id="importSec" class="hidden bg-white p-5 rounded-xl shadow space-y-2">
-  <h3 class="font-bold">📥 Report လက်ခံရန်</h3>
-  <p class="text-xs text-gray-500">Viber/Telegram group ထဲက report စာတွေကို copy ကူးပြီး ဒီမှာ paste လုပ်ပါ။ တပြိုင်နက် များများ paste လုပ်လို့ရပါတယ်။</p>
-  <textarea id="impTxt" rows="4" class="f" placeholder="ဒီမှာ paste လုပ်ပါ"></textarea>
-  <button onclick="doImport()" class="w-full bg-green-600 text-white py-2 rounded-lg font-bold text-sm">စာရင်းထဲ ထည့်မည်</button>
-  <p id="impMsg" class="text-xs text-green-700"></p>
-</div>
-<div id="supSec" class="hidden bg-white p-5 rounded-xl shadow space-y-3">
-  <div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold">✅ Report စာရင်း</h3>
-    <div class="text-xs space-x-1"><button onclick="flt='All';render()" class="px-2 py-1 bg-gray-200 rounded">အားလုံး</button><button onclick="flt='Pending';render()" class="px-2 py-1 bg-amber-100 rounded">စစ်ရန်</button><button onclick="flt='Approved';render()" class="px-2 py-1 bg-green-100 rounded">အတည်ပြုပြီး</button></div></div>
-  <div id="supList" class="space-y-2"></div>
-</div>
-<div id="wsSec" class="hidden bg-white p-5 rounded-xl shadow space-y-2">
-  <h3 class="font-bold">🔧 Workshop စက်စာရင်း</h3>
-  <div class="overflow-x-auto"><table class="w-full text-xs border"><thead class="bg-gray-100"><tr><th class="p-2 border">ရက်</th><th class="p-2 border">စက်</th><th class="p-2 border">ဖောက်သည်</th><th class="p-2 border">ပြစ်ချက်</th><th class="p-2 border">အခြေအနေ</th></tr></thead><tbody id="wsBody"></tbody></table></div>
-</div>
-<div id="pdfSec" class="hidden bg-white p-5 rounded-xl shadow space-y-3">
-  <div class="flex justify-between items-center"><h3 class="font-bold">📄 စာရင်းချုပ် PDF</h3>
-    <div class="space-x-1"><button onclick="exportPDF('Monthly')" class="bg-red-600 text-white text-xs px-3 py-2 rounded font-bold">လစဉ်</button><button onclick="exportPDF('Annual')" class="bg-indigo-700 text-white text-xs px-3 py-2 rounded font-bold">နှစ်ချုပ်</button></div></div>
-  <div id="printable" class="p-4 border rounded bg-white space-y-3">
-    <div class="text-center border-b pb-2"><h2 class="font-bold text-blue-900">TODAY AIRCON SERVICE DEPARTMENT</h2><p class="text-xs text-gray-600">Operational Summary Report</p><p id="pPeriod" class="text-xs text-blue-600 font-bold"></p></div>
-    <div class="grid grid-cols-4 gap-2 text-center text-xs">
-      <div class="p-2 bg-blue-50 rounded">စုစုပေါင်း<br><b id="n1" class="text-lg">0</b></div>
-      <div class="p-2 bg-green-50 rounded">အတည်ပြု<br><b id="n2" class="text-lg">0</b></div>
-      <div class="p-2 bg-amber-50 rounded">Workshop<br><b id="n3" class="text-lg">0</b></div>
-      <div class="p-2 bg-purple-50 rounded">Relocation<br><b id="n4" class="text-lg">0</b></div>
-    </div>
-    <table class="w-full text-xs border"><thead class="bg-gray-100"><tr><th class="p-1 border">ရက်</th><th class="p-1 border">အဖွဲ့</th><th class="p-1 border">အမျိုးအစား</th><th class="p-1 border">ပစ္စည်း</th><th class="p-1 border">အခြေအနေ</th></tr></thead><tbody id="sumBody"></tbody></table>
-    <div class="pt-6 grid grid-cols-2 text-center text-xs text-gray-600"><div><p class="border-t w-32 mx-auto pt-1 font-bold">Supervisor</p></div><div><p class="border-t w-32 mx-auto pt-1 font-bold">Service Manager</p></div></div>
-  </div>
-</div>
-</div>
+<details id="alertD" class="hidden c"><summary class="font-bold cursor-pointer">🚨 တိုက်ရိုက်အစီရင်ခံရန် (Direct Line – အရေးပေါ်သာ)</summary><div class="space-y-2 pt-3">
+<select id="aK" class="f" onchange="aTo.disabled=this.value==='C';if(this.value==='C')aTo.value='manager'"><option value="E">🚨 အသက်အန္တရာယ်/ဘေးကင်းရေး အရေးပေါ်</option><option value="C">🆘 အရေးပေါ် ဖောက်သည်တိုင်ကြားချက်</option></select>
+<select id="aTo" class="f"><option value="supA">Supervisor A</option><option value="supB">Supervisor B</option><option value="manager">Service Manager</option></select>
+<input id="aBy" class="f" placeholder="ကျော်လွှားလိုက်သော ကိုယ်ပိုင်ကြီးကြပ်သူ အမည် (Leader/Supervisor)">
+<textarea id="aT" rows="2" class="f" placeholder="ဖြစ်ရပ် အသေးစိတ်"></textarea><button onclick="sendAlert()" class="b bg-red-600 w-full py-2">ပို့မည်</button></div></details>
 
+<div id="imp" class="hidden c space-y-2"><h3 class="font-bold">📥 Report/အဆင့် လက်ခံရန်</h3><p class="text-xs text-gray-500">Viber/Telegram group ထဲက စာတွေကို copy ကူးပြီး paste လုပ်ပါ။</p>
+<textarea id="iT" rows="3" class="f"></textarea><button onclick="doImport()" class="b bg-green-600 w-full py-2">စာရင်းထဲ ထည့်မည်</button><p id="iM" class="text-xs text-green-700"></p></div>
+<div id="mg" class="hidden c space-y-1 text-xs"></div>
+<div id="wsP" class="hidden c space-y-2 text-xs"></div>
+<div id="list" class="hidden space-y-3"></div>
+<div id="pdf" class="hidden c space-y-2"><div class="flex justify-between"><b>📄 ရုံးတွင်းစက် Report PDF</b><span><button onclick="expPDF('Monthly')" class="b bg-red-600">လစဉ်</button> <button onclick="expPDF('Annual')" class="b bg-indigo-700">နှစ်ချုပ်</button></span></div>
+<div id="pr" class="p-3 border rounded space-y-2 bg-white"><div class="text-center"><b class="text-blue-900">TODAY AIRCON SERVICE DEPARTMENT</b><p class="text-xs">Workshop Repair Report</p><p id="pp" class="text-xs text-blue-600"></p></div>
+<table class="w-full text-xs border"><thead class="bg-gray-100"><tr><th class="p-1 border">စက်</th><th class="p-1 border">ဖောက်သည်</th><th class="p-1 border">ရောက်</th><th class="p-1 border">ကြာ/ခန့်မှန်း</th><th class="p-1 border">ကုန်ကျ</th><th class="p-1 border">အခြေအနေ</th></tr></thead><tbody id="sb"></tbody></table><p id="tot" class="text-xs font-bold text-right"></p></div></div>
+</div>
 <script>
-const SUP_PIN = '1234';            // ← Supervisor PIN ကို ဒီမှာ ပြောင်းပါ
-const KEY = 'ta_simple_v1';
-let st = JSON.parse(localStorage.getItem(KEY) || '{"user":null,"reports":[]}');
-let flt = 'All';
-const $ = id => document.getElementById(id);
-const rel = $('rel'), pk = $('pk');
-const save = () => localStorage.setItem(KEY, JSON.stringify(st));
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const enc = o => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
-const dec = b => JSON.parse(decodeURIComponent(escape(atob(b))));
-const roleName = {field:'ကွင်းဆင်း', workshop:'Workshop Supervisor', supervisor:'Supervisor / Manager'};
-
-function init() {
-  $('rDate').value = new Date().toISOString().slice(0,10);
-  const u = st.user;
-  $('setup').classList.toggle('hidden', !!u);
-  $('who').classList.toggle('hidden', !u);
-  ['fieldSec','importSec','supSec','wsSec','pdfSec'].forEach(i => $(i).classList.add('hidden'));
-  if (!u) return;
-  $('whoName').textContent = u.name; $('whoRole').textContent = roleName[u.role];
-  if (u.role === 'field') $('fieldSec').classList.remove('hidden');
-  else { ['importSec','supSec','wsSec'].forEach(i => $(i).classList.remove('hidden'));
-         if (u.role === 'supervisor') $('pdfSec').classList.remove('hidden'); }
-  render();
-}
-function doSetup() {
-  const name = $('sName').value.trim(), role = $('sRole').value;
-  const err = $('sErr'); err.classList.add('hidden');
-  if (!name) { err.textContent = 'အမည် ထည့်ပါ'; err.classList.remove('hidden'); return; }
-  if (role !== 'field' && $('sPin').value !== SUP_PIN) { err.textContent = 'PIN မှားနေသည်'; err.classList.remove('hidden'); return; }
-  st.user = { name, role }; save(); init();
-}
-function resetUser() { if (confirm('အမည်/ရာထူး ပြောင်းမလား? (report စာရင်းတွေ မပျက်ပါ)')) { st.user = null; save(); init(); } }
-
-function msgOf(r) {
-  const L = ['❄️ Today Aircon Daily Report', '📅 ' + r.date, '👥 ' + r.team, '🏠 ' + r.customer, '🔧 ' + r.jobType];
-  if (r.pickupReq) L.push('⚠️ Workshop သို့: ' + r.applianceType + ' (' + (r.defect || '-') + ')');
-  if (r.jobType === 'Relocation') L.push('📦 ' + r.relocateType + ' ' + (r.newAddress || ''));
-  L.push('🧰 ပစ္စည်း: ' + (r.materials || '-'));
-  if (r.reqType !== 'None') L.push('🆘 တောင်းခံ: ' + r.reqType + ' (' + r.reqUrgency + ')');
-  L.push('📝 ' + r.status, '👤 ' + r.by, '#TA:' + enc(r));
-  return L.join('\n');
-}
-function submitReport(e) {
-  e.preventDefault();
-  const r = { id: Date.now() + '-' + Math.random().toString(36).slice(2,6), date: $('rDate').value, team: $('rTeam').value.trim(),
-    customer: $('rCust').value.trim(), jobType: $('rJob').value, pickupReq: $('rPick').checked, applianceType: $('rApp').value,
-    defect: $('rDef').value.trim(), relocateType: $('rRelT').value, newAddress: $('rAddr').value.trim(), materials: $('rMat').value.trim(),
-    reqType: $('rReq').value, reqUrgency: $('rUrg').value, status: $('rStat').value.trim(), by: st.user.name,
-    approval: 'Pending', workshopStatus: $('rPick').checked ? 'Intake' : 'N/A' };
-  st.reports.unshift(r); save();
-  $('rf').reset(); $('rDate').value = new Date().toISOString().slice(0,10); pk.classList.add('hidden'); rel.classList.add('hidden');
-  render(); shareReport(r.id);
-}
-async function shareReport(id) {
-  const r = st.reports.find(x => x.id === id); if (!r) return;
-  const text = msgOf(r);
-  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  copyReport(id);
-}
-async function copyReport(id) {
-  const r = st.reports.find(x => x.id === id); if (!r) return;
-  try { await navigator.clipboard.writeText(msgOf(r)); alert('Copy ကူးပြီးပါပြီ။ Viber/Telegram မှာ paste လုပ်ပြီး ပို့ပါ။'); }
-  catch (e) { prompt('ဒီစာကို copy ကူးပါ', msgOf(r)); }
-}
-function delReport(id) { if (confirm('ဖျက်မလား?')) { st.reports = st.reports.filter(r => r.id !== id); save(); render(); } }
-
-function doImport() {
-  const txt = $('impTxt').value; let add = 0, dup = 0, bad = 0;
-  for (const m of txt.matchAll(/#TA:([A-Za-z0-9+\/=]+)/g)) {
-    try { const r = dec(m[1]); if (!r.id) { bad++; continue; }
-      if (st.reports.some(x => x.id === r.id)) dup++; else { st.reports.unshift(r); add++; } } catch (e) { bad++; }
-  }
-  st.reports.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  save(); render(); $('impTxt').value = '';
-  $('impMsg').textContent = `အသစ် ${add} ခု ထည့်ပြီး` + (dup ? ` · ထပ်နေ ${dup}` : '') + (bad ? ` · ဖတ်မရ ${bad}` : '');
-}
-function approve(id) { st.reports = st.reports.map(r => r.id === id ? { ...r, approval: 'Approved' } : r); save(); render(); }
-function setWs(id, v) { st.reports = st.reports.map(r => r.id === id ? { ...r, workshopStatus: v } : r); save(); }
-
-function render() {
-  if (!st.user) return;
-  // my list
-  $('myList').innerHTML = st.reports.filter(r => r.by === st.user.name).slice(0, 15).map(r => `
-    <div class="p-3 border rounded-lg bg-gray-50 text-xs flex justify-between items-center gap-2">
-      <div><b>${esc(r.customer)}</b> <span class="text-gray-500">${esc(r.date)}</span><br>${esc(r.jobType)}</div>
-      <div class="flex gap-1 shrink-0"><button onclick="shareReport('${r.id}')" class="bg-green-600 text-white px-2 py-1 rounded">ပို့မည်</button>
-      <button onclick="copyReport('${r.id}')" class="bg-gray-200 px-2 py-1 rounded">Copy</button>
-      <button onclick="delReport('${r.id}')" class="text-red-500 px-1">✕</button></div></div>`).join('') || '<p class="text-xs text-gray-400">မရှိသေးပါ</p>';
-  if (st.user.role === 'field') return;
-  const can = st.user.role === 'supervisor';
-  const list = flt === 'All' ? st.reports : st.reports.filter(r => r.approval === flt);
-  $('supList').innerHTML = list.map(r => `
-    <div class="p-3 border rounded-lg bg-gray-50 text-xs space-y-1">
-      <div class="flex justify-between"><div><b class="text-sm text-blue-800">${esc(r.customer)}</b> <span class="text-gray-500">${esc(r.date)}</span><br>${esc(r.team)} · ${esc(r.jobType)} · ${esc(r.by)}</div>
-      <span class="h-fit px-2 py-0.5 rounded text-white font-bold ${r.approval === 'Approved' ? 'bg-green-600' : 'bg-amber-500'}">${r.approval}</span></div>
-      ${r.pickupReq ? `<p class="bg-amber-100 text-amber-800 p-1 rounded font-bold">⚠️ Workshop: ${esc(r.applianceType)} (${esc(r.defect || '-')})</p>` : ''}
-      ${r.reqType !== 'None' ? `<p class="bg-red-100 text-red-800 p-1 rounded font-bold">🆘 ${esc(r.reqType)} (${esc(r.reqUrgency)})</p>` : ''}
-      <p><b>ပစ္စည်း:</b> ${esc(r.materials || '-')}</p><p><b>အခြေအနေ:</b> ${esc(r.status)}</p>
-      ${can && r.approval === 'Pending' ? `<button onclick="approve('${r.id}')" class="bg-green-600 text-white px-3 py-1 rounded font-bold">အတည်ပြုမည်</button>` : ''}
-    </div>`).join('') || '<p class="text-xs text-gray-400 text-center py-3">report မရှိသေးပါ</p>';
-  const opts = [['Intake','Intake'],['Repairing','Repairing'],['Testing','Testing'],['Delivered','Delivered']];
-  const ws = st.reports.filter(r => r.pickupReq);
-  $('wsBody').innerHTML = ws.map(r => `<tr><td class="p-2 border">${esc(r.date)}</td><td class="p-2 border font-bold">${esc(r.applianceType)}</td><td class="p-2 border">${esc(r.customer)}</td><td class="p-2 border">${esc(r.defect || '-')}</td>
-    <td class="p-2 border"><select onchange="setWs('${r.id}',this.value)" class="border rounded p-1 bg-white">${opts.map(o => `<option ${r.workshopStatus === o[0] ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></td></tr>`).join('')
-    || '<tr><td colspan="5" class="p-3 text-center text-gray-400">မရှိပါ</td></tr>';
-  summary('Monthly');
-}
-function summary(p) {
-  const n = new Date(), y = String(n.getFullYear()), ym = y + '-' + String(n.getMonth() + 1).padStart(2, '0');
-  const L = st.reports.filter(r => (r.date || '').startsWith(p === 'Annual' ? y : ym));
-  $('pPeriod').textContent = `Period: ${p} (${n.toLocaleDateString()})`;
-  $('n1').textContent = L.length; $('n2').textContent = L.filter(r => r.approval === 'Approved').length;
-  $('n3').textContent = L.filter(r => r.pickupReq).length; $('n4').textContent = L.filter(r => r.jobType === 'Relocation').length;
-  $('sumBody').innerHTML = L.map(r => `<tr><td class="p-1 border">${esc(r.date)}</td><td class="p-1 border">${esc(r.team)}</td><td class="p-1 border">${esc(r.jobType)}</td><td class="p-1 border">${esc(r.materials || '-')}</td><td class="p-1 border">${esc(r.approval)}</td></tr>`).join('');
-}
-function exportPDF(p) {
-  summary(p);
-  html2canvas($('printable'), { scale: 2 }).then(c => {
-    const { jsPDF } = window.jspdf, pdf = new jsPDF('p', 'mm', 'a4');
-    const w = 210, H = 297, h = c.height * w / c.width, img = c.toDataURL('image/png');
-    let left = h, pos = 0; pdf.addImage(img, 'PNG', 0, pos, w, h); left -= H;
-    while (left > 0) { pos -= H; pdf.addPage(); pdf.addImage(img, 'PNG', 0, pos, w, h); left -= H; }
-    pdf.save(`Today_Aircon_${p}_Report.pdf`); summary('Monthly');
-  });
-}
-init();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-</script>
-</body></html>
+const PIN={supA:'3333',supB:'2222',manager:'9999'}; // ← PIN များကို ဒီမှာ ပြောင်းပါ
+const RN={manager:'Service Manager',supA:'Supervisor A',supB:'Supervisor B',leader:'Service Leader',second:'Second Leader',helper:'Service Helper',trainee:'Service Trainee'};
+const FIELD=['second','leader'],WSS=['ရောက်ရှိ','ပြင်ဆင်နေ','စမ်းသပ်နေ','ပြင်ပြီး','Customer ထံ ပို့ပြီး'],DONE=['ပြင်ပြီး','Customer ထံ ပို့ပြီး'];
+const TOUP={second:'Leader',leader:'Supervisor A သို့မဟုတ် B'};
+const CFG={'Aircon':{k:['Split','Cassette','Floor Standing','Window','VRF/VRV'],d:['Indoor PCB','Outdoor PCB','Inverter Board','Compressor','Fan Motor','Capacitor','Gas ယိုစိမ့်','Sensor','ရေယိုစိမ့်','Remote/Display']},
+'ရေခဲသေတ္တာ':{k:['Direct Cool','Frost Free','Side by Side'],d:['PCB','Compressor','Gas ယိုစိမ့်','Defrost Heater/Sensor','Fan Motor','Thermostat','Door Seal']},
+'အဝတ်လျှော်စက်':{k:['Top Load','Front Load','Twin Tub'],d:['PCB','Motor','Drain Pump','Water Inlet Valve','Door Lock','Bearing','Belt']},'အခြား':{k:['-'],d:['PCB','Motor','Compressor','အခြား']}};
+const AP=['စစ်ဆေးပြီး','Approved','မှတ်ချက်'],ST2=['စစ်ဆေးပြီး','Supervisor/Leader ထံ တင်ပြပြီး','Customer ထံ ပြန်ပို့ပြီး','Workshop သို့ ပို့ပြီး','မှတ်ချက်'];
+const STG={second:ST2,leader:ST2,supA:AP,supB:AP,manager:['Approved','မှတ်ချက်']};
+const K='ta_v3';let st=JSON.parse(localStorage.getItem(K)||'{"u":null,"j":[]}'),U=st.u;
+const $=i=>document.getElementById(i),save=()=>localStorage.setItem(K,JSON.stringify(st));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const enc=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o)))),dec=b=>JSON.parse(decodeURIComponent(escape(atob(b))));
+const fmt=t=>new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const today=()=>new Date().toISOString().slice(0,10),DAY=864e5,has=(r,s)=>r.events.some(e=>e.stage===s),lastE=r=>r.events[r.events.length-1];
+const cost=r=>r.ws?(+r.ws.parts||0)+(+r.ws.labor||0):0,done=r=>r.ws&&DONE.includes(r.ws.st);
+const days=r=>{if(!r.ws)return 0;const a=r.ws.arr?new Date(r.ws.arr).getTime():r.events[0].t,b=done(r)&&r.ws.end?new Date(r.ws.end).getTime():Date.now();return Math.max(0,Math.floor((b-a)/DAY))};
+const late=r=>r.ws&&!done(r)&&r.ws.eta!==''&&days(r)>+r.ws.eta?days(r)-r.ws.eta:0;
+function init(){U=st.u;$('rD').value=today();$('rA').innerHTML=Object.keys(CFG).map(k=>`<option>${k}</option>`).join('');fillCfg();
+ $('setup').classList.toggle('hidden',!!U);$('who').classList.toggle('hidden',!U);['form','alertD','imp','mg','wsP','list','pdf'].forEach(i=>$(i).classList.add('hidden'));if(!U)return;
+ $('wn').textContent=U.name+' ('+U.team+')';$('wr').textContent=RN[U.role];const f=FIELD.includes(U.role);
+ if(f){$('form').classList.remove('hidden');$('toTxt').textContent='ဤ report ကို '+TOUP[U.role]+' ထံ အစီရင်ခံမည်';}
+ if(U.role!=='manager')$('alertD').classList.remove('hidden');$('imp').classList.remove('hidden');
+ if(U.role==='manager')$('mg').classList.remove('hidden');if(['supB','manager'].includes(U.role)){$('wsP').classList.remove('hidden');$('pdf').classList.remove('hidden')}
+ $('list').classList.remove('hidden');render()}
+function fillCfg(){const c=CFG[$('rA').value];$('rO').classList.toggle('hidden',$('rA').value!=='အခြား');$('rK').innerHTML=c.k.map(x=>`<option>${x}</option>`).join('');
+ $('rI').innerHTML='<option>Inverter</option><option>Non-Inverter</option><option>မသိ</option>';$('rDf').innerHTML=c.d.map(x=>`<label class="flex gap-1"><input type="checkbox" value="${x}"> ${x}</label>`).join('')}
+function doSetup(){const n=$('sN').value.trim(),t=$('sT').value.trim(),r=$('sR').value;if(!n||!t)return $('sE').textContent='အမည်နှင့် Team ထည့်ပါ';
+ if(PIN[r]&&$('sP').value!==PIN[r])return $('sE').textContent='PIN မှားနေသည်';st.u={name:n,team:t,role:r};save();init()}
+function resetUser(){if(confirm('အမည်/ရာထူး ပြောင်းမလား?')){st.u=null;save();init()}}
+function msgOf(r){const e=lastE(r);let L;
+ if(r.kind==='alert')L=['🚨 '+(r.ak==='E'?'အရေးပေါ်/ဘေးကင်း':'အရေးပေါ် ဖောက်သည်'),'➡️ '+RN[r.to]+' ထံ','🔁 ကျော်လွှားခဲ့သူ: '+r.bypassed,r.detail];
+ else{L=['❄️ '+r.app+(r.kind2!=='-'?' ('+r.kind2+', '+r.tech+')':''),'📅 '+r.date+' · 👥 '+r.team+' · 🏠 '+r.customer,'⚠️ '+(r.defects.join(', ')||'-')+' '+r.detail];if(r.crew)L.push('👷 '+r.crew);
+ if(r.ws)L.push('🔧 Workshop: '+r.items+' · ခန့်မှန်း '+r.ws.eta+' ရက် · '+r.ws.st+' · ကုန်ကျ '+cost(r)+' Ks')}
+ L.push('➡️ '+e.stage+' – '+e.by+(e.note?' : '+e.note:''),'#TA:'+enc(r));return L.join('\n')}
+function submitJob(e){e.preventDefault();const w=$('rW').checked;if(w&&(!$('rIt').value.trim()||$('rE').value===''))return alert('သယ်လာသော ပစ္စည်းနှင့် ခန့်မှန်းကြာချိန် ထည့်ပါ');
+ const app=$('rA').value==='အခြား'?($('rO').value.trim()||'အခြား'):$('rA').value;
+ const r={id:Date.now()+'-'+Math.random().toString(36).slice(2,6),kind:'job',date:$('rD').value,team:U.team,customer:$('rC').value.trim(),jobType:$('rJ').value,sup:$('rSp').value,app,kind2:$('rK').value,tech:$('rI').value,brand:$('rB').value.trim(),
+ defects:[...document.querySelectorAll('#rDf input:checked')].map(x=>x.value),detail:$('rDt').value.trim(),items:$('rIt').value.trim(),custNote:$('rN').value.trim(),materials:$('rM').value.trim(),by:U.name,byRole:U.role,crew:$('rCr').value.trim(),
+ ws:w?{eta:$('rE').value,st:'ရောက်ရှိ',arr:'',end:'',parts:0,labor:0,u:Date.now()}:null,events:[{t:Date.now(),by:U.name,role:U.role,stage:'Report တင်ပြီး',note:$('rS').value.trim()}]};
+ st.j.unshift(r);save();$('form').reset();fillCfg();$('wsB').classList.add('hidden');$('rD').value=today();render();share(r.id)}
+function sendAlert(){const t=$('aT').value.trim();if(!t||!$('aBy').value.trim())return alert('ဖြစ်ရပ်နှင့် ကျော်လွှားခဲ့သူ အမည် ထည့်ပါ');
+ const r={id:Date.now()+'-'+Math.random().toString(36).slice(2,6),kind:'alert',ak:$('aK').value,to:$('aTo').value,bypassed:$('aBy').value.trim(),detail:t,date:today(),team:U.team,by:U.name,byRole:U.role,
+ events:[{t:Date.now(),by:U.name,role:U.role,stage:'Direct Line ပို့ပြီး',note:t}]};st.j.unshift(r);save();$('aT').value='';render();share(r.id)}
+async function share(id){const r=st.j.find(x=>x.id===id),t=msgOf(r);if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e.name==='AbortError')return}}
+ try{await navigator.clipboard.writeText(t);alert('Copy ကူးပြီး။ Viber/Telegram မှာ paste လုပ်ပါ')}catch(e){prompt('Copy ကူးပါ',t)}}
+function addStep(id,s){const r=st.j.find(x=>x.id===id),n=$('n_'+id)?$('n_'+id).value.trim():'';r.events.push({t:Date.now(),by:U.name,role:U.role,stage:s||$('s_'+id).value,note:n});save();render();share(id)}
+function saveWs(id){const r=st.j.find(x=>x.id===id),w=r.ws,s=$('ws_'+id).value;w.arr=$('wa_'+id).value||w.arr;w.eta=$('we_'+id).value;w.parts=+$('wp_'+id).value||0;w.labor=+$('wl_'+id).value||0;
+ if(DONE.includes(s)&&!w.end)w.end=today();if(!DONE.includes(s))w.end='';const ch=w.st!==s;w.st=s;w.u=Date.now();
+ r.events.push({t:Date.now(),by:U.name,role:U.role,stage:'Workshop: '+s,note:'ကုန်ကျ '+cost(r)+' Ks · ခန့်မှန်း '+w.eta+' ရက်'});save();render();share(id)}
+function doImport(){let a=0,u=0;for(const m of $('iT').value.matchAll(/#TA:([A-Za-z0-9+\/=]+)/g)){try{const r=dec(m[1]),x=st.j.find(j=>j.id===r.id);
+ if(!x){st.j.unshift(r);a++}else{let n=0;r.events.forEach(e=>{if(!x.events.some(y=>y.t===e.t&&y.by===e.by&&y.stage===e.stage)){x.events.push(e);n++}});if(r.ws&&(!x.ws||r.ws.u>x.ws.u)){x.ws=r.ws;n++}if(n)u++}}catch(e){}}
+ st.j.forEach(j=>j.events.sort((p,q)=>p.t-q.t));save();render();$('iT').value='';$('iM').textContent=`အသစ် ${a} ခု · ပြောင်းလဲသော job ${u} ခု`}
+function vis(r){const R=U.role;if(R==='manager')return true;if(r.kind==='alert')return r.by===U.name||r.to===R||(['second','leader'].includes(R)&&r.team===U.team);
+ if(['second','leader'].includes(R))return r.team===U.team;if(R==='supA')return r.sup==='A';return r.sup==='B'||!!r.ws}
+function card(r){const ev=[...r.events].sort((a,b)=>a.t-b.t),ap=has(r,'Approved'),L=late(r),al=r.kind==='alert',nb=al&&has(r,'Post-Bypass အသိပေးပြီး');
+ const head=al?`<b class="text-sm text-red-700">${r.ak==='E'?'🚨 အရေးပေါ်/ဘေးကင်း':'🆘 အရေးပေါ် ဖောက်သည်'}</b> → ${RN[r.to]}<br>ကျော်လွှားခဲ့သူ: ${esc(r.bypassed)} · ${esc(r.by)} (${esc(r.team)})`:
+ `<b class="text-sm text-blue-800">${esc(r.customer)}</b> · ${esc(r.date)}<br>${esc(r.team)} · ${esc(r.jobType)} · ${esc(r.by)} (${RN[r.byRole]})`;
+ const body=al?`<p>${esc(r.detail)}</p>`:`<p><b>စက်:</b> ${esc(r.app)} ${r.kind2!=='-'?esc(r.kind2)+' / '+esc(r.tech):''} ${esc(r.brand)}</p><p><b>ပြစ်ချက်:</b> ${esc(r.defects.join(', ')||'-')} ${esc(r.detail)}</p>${r.crew?`<p><b>အဖွဲ့သား:</b> ${esc(r.crew)}</p>`:''}
+ ${r.ws?`<p class="bg-amber-100 p-1 rounded"><b>🔧 ${esc(r.items)}</b> · ${esc(r.ws.st)} · ${days(r)}/${esc(r.ws.eta)} ရက် · ${cost(r).toLocaleString()} Ks</p>`:''}
+ <p><b>Customer ကို ပြောခဲ့:</b> ${esc(r.custNote||'-')} · <b>သုံးပစ္စည်း:</b> ${esc(r.materials||'-')}</p>`;
+ const wf=U.role==='supB'&&r.ws?`<div class="bg-amber-50 p-2 rounded grid grid-cols-2 gap-1"><input id="wa_${r.id}" type="date" value="${esc(r.ws.arr||today())}" class="f"><input id="we_${r.id}" type="number" value="${esc(r.ws.eta)}" placeholder="ခန့်မှန်းရက်" class="f">
+ <input id="wp_${r.id}" type="number" value="${r.ws.parts}" placeholder="အပိုပစ္စည်း ကုန်ကျ Ks" class="f"><input id="wl_${r.id}" type="number" value="${r.ws.labor}" placeholder="လက်ခ Ks" class="f">
+ <select id="ws_${r.id}" class="f">${WSS.map(s=>`<option ${r.ws.st===s?'selected':''}>${s}</option>`).join('')}</select><button onclick="saveWs('${r.id}')" class="b bg-amber-600">Workshop update</button></div>`:'';
+ const step=al?(r.by===U.name&&!nb?`<button onclick="addStep('${r.id}','Post-Bypass အသိပေးပြီး')" class="b bg-red-600">ကျော်လွှားခဲ့သူထံ ပြန်အသိပေးပြီး</button>`:''):
+ `<div class="flex gap-1"><select id="s_${r.id}" class="f">${STG[U.role].map(s=>`<option>${s}</option>`).join('')}</select><input id="n_${r.id}" class="f" placeholder="မှတ်ချက်"><button onclick="addStep('${r.id}')" class="b bg-blue-600 shrink-0">ထည့်</button></div>`;
+ return `<div class="c space-y-1 text-xs"><div class="flex justify-between gap-2"><div>${head}</div><div class="text-right">${al?(nb?'<span class="b bg-green-600">အသိပေးပြီး</span>':'<span class="b bg-red-600">ပြန်မအသိပေးရသေး</span>'):ap?'<span class="b bg-green-600">Approved</span>':'<span class="b bg-amber-500">Pending</span>'}${L?`<br><span class="b bg-red-600 inline-block mt-1">နောက်ကျ ${L} ရက်</span>`:''}</div></div>${body}
+ <div class="border-l-2 border-blue-300 pl-2">${ev.map(e=>`<div>${fmt(e.t)} · <b>${esc(e.by)}</b> (${RN[e.role]||''}) → <b>${esc(e.stage)}</b> ${esc(e.note)}</div>`).join('')}</div>${wf}${step}
+ <button onclick="share('${r.id}')" class="text-green-700 underline">ပြန်ပို့ရန်</button></div>`}
+function render(){if(!U)return;$('list').innerHTML=st.j.filter(vis).map(card).join('')||'<p class="text-center text-xs text-gray-400">မရှိသေးပါ</p>';
+ const W=st.j.filter(r=>r.ws),cur=W.filter(r=>!done(r)),fin=W.filter(done);
+ if(['supB','manager'].includes(U.role))$('wsP').innerHTML=`<b class="text-sm">🔧 ရုံးတွင်းစက် အခြေအနေ</b><p>လက်ရှိ ပြင်နေသောစက် <b>${cur.length}</b> လုံး · ပြီးသွားသော ${fin.length} လုံး · စုစုပေါင်း ကုန်ကျ <b>${W.reduce((s,r)=>s+cost(r),0).toLocaleString()} Ks</b> · ပျမ်းမျှ ပြင်ချိန် ${fin.length?(fin.reduce((s,r)=>s+days(r),0)/fin.length).toFixed(1):'-'} ရက်</p>
+ <p><b>ယခု ပြင်နေသောစက်များ:</b> ${cur.map(r=>esc(r.items)+' ['+esc(r.ws.st)+', '+days(r)+'/'+esc(r.ws.eta)+' ရက်'+(late(r)?', နောက်ကျ':'')+']').join(' · ')||'မရှိ'}</p>`;
+ if(U.role==='manager'){const by={};st.j.forEach(r=>r.events.forEach(e=>by[e.by]=(by[e.by]||0)+1));
+ const stale=st.j.filter(r=>r.kind==='job'&&!has(r,'Approved')&&Date.now()-lastE(r).t>DAY),nb=st.j.filter(r=>r.kind==='alert'&&!has(r,'Post-Bypass အသိပေးပြီး'));
+ $('mg').innerHTML=`<b class="text-sm">🔎 တာဝန်စစ်ချက် (Manager)</b><p>Job ${st.j.filter(r=>r.kind==='job').length} · Approved ${st.j.filter(r=>has(r,'Approved')).length} · Direct Line ${st.j.filter(r=>r.kind==='alert').length}</p>
+ <p class="text-red-700"><b>နောက်ကျနေသော Workshop စက်:</b> ${W.filter(late).map(r=>esc(r.items)+' ('+late(r)+' ရက်)').join(', ')||'မရှိ'}</p>
+ <p class="text-red-700"><b>Direct Line ပြီး ပြန်မအသိပေးရသေး:</b> ${nb.map(r=>esc(r.by)+' → '+esc(r.bypassed)).join(', ')||'မရှိ'}</p>
+ <p class="text-amber-700"><b>၂၄ နာရီကျော် မလှုပ်ရှား (Approve မရသေး):</b> ${stale.map(r=>esc(r.customer)+' ['+esc(lastE(r).stage)+' – '+esc(lastE(r).by)+']').join(', ')||'မရှိ'}</p>
+ <p><b>လုပ်ဆောင်မှု အရေအတွက်:</b> ${Object.entries(by).map(([k,v])=>esc(k)+' '+v).join(' · ')}</p>`}}
+function sum(p){const n=new Date(),y=String(n.getFullYear()),ym=y+'-'+String(n.getMonth()+1).padStart(2,'0'),W=st.j.filter(r=>r.ws&&((r.ws.arr||r.date)||'').startsWith(p==='Annual'?y:ym));
+ $('pp').textContent=`${p} (${n.toLocaleDateString()}) · စက် ${W.length} လုံး`;$('sb').innerHTML=W.map(r=>`<tr><td class="p-1 border">${esc(r.items)}</td><td class="p-1 border">${esc(r.customer)}</td><td class="p-1 border">${esc(r.ws.arr||r.date)}</td><td class="p-1 border">${days(r)}/${esc(r.ws.eta)}</td><td class="p-1 border">${cost(r).toLocaleString()}</td><td class="p-1 border">${esc(r.ws.st)}</td></tr>`).join('');
+ $('tot').textContent='စုစုပေါင်း ကုန်ကျ '+W.reduce((s,r)=>s+cost(r),0).toLocaleString()+' Ks'}
+function expPDF(p){sum(p);html2canvas($('pr'),{scale:2}).then(c=>{const{jsPDF}=window.jspdf,d=new jsPDF('p','mm','a4'),w=210,h=c.height*w/c.width,im=c.toDataURL('image/png');let left=h,pos=0;d.addImage(im,'PNG',0,0,w,h);left-=297;while(left>0){pos-=297;d.addPage();d.addImage(im,'PNG',0,pos,w,h);left-=297}d.save(`Workshop_${p}.pdf`)})}
+init();if(['supB','manager'].includes(U&&U.role))sum('Monthly');if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
