@@ -254,6 +254,7 @@ let auth, db;
 let currentUser = null, reports = [], unsub = null, registering = false, currentFilter = 'All';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const withTimeout = (p, ms, code) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code }), ms))]);
 const toEmail = p => p.replace(/[^0-9+]/g, '') + '@todayaircon.app';
 const show = (id, on) => $(id).classList.toggle('hidden', !on);
 
@@ -263,6 +264,7 @@ function friendly(e) {
   if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')) return 'ဖုန်းနံပါတ် သို့မဟုတ် စကားဝှက် မှားနေပါသည်';
   if (c.includes('email-already-in-use')) return 'ဤဖုန်းနံပါတ်ဖြင့် အကောင့်ရှိပြီးသားပါ';
   if (c.includes('weak-password')) return 'စကားဝှက် အနည်းဆုံး ၆ လုံး လိုပါသည်';
+  if (c.includes('timeout')) return 'ချိတ်ဆက်မှု ကြာလွန်းနေသည်။ အင်တာနက်ကို စစ်ပါ (Mobile data နဲ့ စမ်းကြည့်ပါ)';
   if (c.includes('network')) return 'အင်တာနက် ချိတ်ဆက်မှု စစ်ဆေးပါ';
   return 'အမှားရှိသည်: ' + (e.message || c);
 }
@@ -297,9 +299,11 @@ function fail(err) {
 function showAuth() { show('loading', false); show('mainApp', false); show('userBadge', false); show('authSection', true); }
 
 async function enter(user) {
+  $('loading').textContent = 'ဝင်ရောက်နေသည်...';
+  show('authSection', false); show('loading', true);
   try {
     const ref = doc(db, 'users', user.uid);
-    let snap = await getDoc(ref);
+    let snap = await withTimeout(getDoc(ref), 20000, 'firestore-timeout');
     if (!snap.exists()) {
       // profile missing (e.g. interrupted sign-up): create a basic one
       const phone = (user.email || '').split('@')[0];
@@ -337,20 +341,25 @@ window.switchAuthTab = tab => {
 
 window.handleLogin = async e => {
   e.preventDefault(); showError('');
-  try { await signInWithEmailAndPassword(auth, toEmail($('loginPhone').value), $('loginPass').value); }
+  const btn = e.target.querySelector('button[type=submit]');
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'ဝင်နေသည်...';
+  try { await withTimeout(signInWithEmailAndPassword(auth, toEmail($('loginPhone').value), $('loginPass').value), 20000, 'login-timeout'); }
   catch (err) { showError(friendly(err)); }
+  btn.disabled = false; btn.textContent = label;
 };
 
 window.handleRegister = async e => {
   e.preventDefault(); showError('');
+  const btn = e.target.querySelector('button[type=submit]');
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'ဖန်တီးနေသည်...';
   registering = true;
   try {
-    const cred = await createUserWithEmailAndPassword(auth, toEmail($('regPhone').value), $('regPass').value);
-    await setDoc(doc(db, 'users', cred.user.uid), {
+    const cred = await withTimeout(createUserWithEmailAndPassword(auth, toEmail($('regPhone').value), $('regPass').value), 20000, 'register-timeout');
+    await withTimeout(setDoc(doc(db, 'users', cred.user.uid), {
       name: $('regName').value.trim(), phone: $('regPhone').value.trim(), role: $('regRole').value, createdAt: serverTimestamp()
-    });
-    registering = false; await enter(cred.user);
-  } catch (err) { registering = false; showError(friendly(err)); }
+    }), 20000, 'firestore-timeout');
+    registering = false; btn.disabled = false; btn.textContent = label; await enter(cred.user);
+  } catch (err) { registering = false; showError(friendly(err)); btn.disabled = false; btn.textContent = label; }
 };
 
 window.logout = () => signOut(auth);
